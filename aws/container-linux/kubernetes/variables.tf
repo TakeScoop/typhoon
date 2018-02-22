@@ -100,3 +100,18 @@ variable "cluster_domain_suffix" {
   type        = "string"
   default     = "cluster.local"
 }
+
+variable "oidc_issuer_url" {
+  description = "URL of the provider which allows the API server to discover public signing keys"
+  type = "string"
+}
+
+variable "oidc_client_id" {
+  description = "A client id that all tokens must be issued for"
+  type = "string"
+}
+
+variable "oidc_username_claim" {
+  description = "JWT claim to use as the user name."
+  type = "string"
+}

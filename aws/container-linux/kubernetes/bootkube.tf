@@ -11,4 +11,8 @@ module "bootkube" {
   pod_cidr              = "${var.pod_cidr}"
   service_cidr          = "${var.service_cidr}"
   cluster_domain_suffix = "${var.cluster_domain_suffix}"
+
+  oidc_issuer_url = "${var.oidc_issuer_url}"
+  oidc_client_id = "${var.oidc_client_id}"
+  oidc_username_claim = "${var.oidc_username_claim}"
 }
