@@ -33,9 +33,11 @@ resource "aws_instance" "controllers" {
   }
 
   # network
-  associate_public_ip_address = true
-  subnet_id                   = "${element(aws_subnet.public.*.id, count.index)}"
-  vpc_security_group_ids      = ["${aws_security_group.controller.id}"]
+  subnet_id = "${element(aws_subnet.private.*.id, count.index)}"
+  vpc_security_group_ids = [
+    "${aws_security_group.controller.id}",
+    "${aws_security_group.bastion_internal.id}"
+  ]
 
   lifecycle {
     ignore_changes = ["ami"]
@@ -56,13 +58,13 @@ data "template_file" "controller_config" {
     # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
     etcd_initial_cluster = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.repeat.*.triggers.domain))}"
 
-    k8s_dns_service_ip      = "${cidrhost(var.service_cidr, 10)}"
-    ssh_authorized_key      = "${var.ssh_authorized_key}"
-    cluster_domain_suffix   = "${var.cluster_domain_suffix}"
-    kubeconfig_ca_cert      = "${module.bootkube.ca_cert}"
-    kubeconfig_kubelet_cert = "${module.bootkube.kubelet_cert}"
-    kubeconfig_kubelet_key  = "${module.bootkube.kubelet_key}"
-    kubeconfig_server       = "${module.bootkube.server}"
+    k8s_dns_service_ip       = "${cidrhost(var.service_cidr, 10)}"
+    ssh_authorized_keys_list = "[ ${join(", ", var.ssh_authorized_keys)} ]"
+    cluster_domain_suffix    = "${var.cluster_domain_suffix}"
+    kubeconfig_ca_cert       = "${module.bootkube.ca_cert}"
+    kubeconfig_kubelet_cert  = "${module.bootkube.kubelet_cert}"
+    kubeconfig_kubelet_key   = "${module.bootkube.kubelet_key}"
+    kubeconfig_server        = "${module.bootkube.server}"
   }
 }
 

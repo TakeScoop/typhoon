@@ -7,37 +7,61 @@ resource "aws_route53_record" "apiserver" {
 
   # AWS recommends their special "alias" records for ELBs
   alias {
-    name                   = "${aws_elb.apiserver.dns_name}"
-    zone_id                = "${aws_elb.apiserver.zone_id}"
+    name                   = "${aws_lb.apiserver.dns_name}"
+    zone_id                = "${aws_lb.apiserver.zone_id}"
     evaluate_target_health = true
   }
 }
 
-# Controller Network Load Balancer
-resource "aws_elb" "apiserver" {
-  name            = "${var.cluster_name}-apiserver"
-  subnets         = ["${aws_subnet.public.*.id}"]
-  security_groups = ["${aws_security_group.controller.id}"]
+# Network Load Balancer for apiservers
+resource "aws_lb" "apiserver" {
+  name               = "${var.cluster_name}-apiserver"
+  load_balancer_type = "network"
+  internal           = true
 
-  listener {
-    lb_port           = 443
-    lb_protocol       = "tcp"
-    instance_port     = 443
-    instance_protocol = "tcp"
+  subnets = ["${aws_subnet.private.*.id}"]
+}
+
+# Forward HTTP traffic to controllers
+resource "aws_lb_listener" "apiserver-https" {
+  load_balancer_arn = "${aws_lb.apiserver.arn}"
+  protocol          = "TCP"
+  port              = "443"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = "${aws_lb_target_group.controllers.arn}"
   }
+}
 
-  instances = ["${aws_instance.controllers.*.id}"]
+# Target group of controllers
+resource "aws_lb_target_group" "controllers" {
+  name        = "${var.cluster_name}-controllers"
+  vpc_id      = "${aws_vpc.network.id}"
+  target_type = "ip"
+
+  protocol = "TCP"
+  port     = 443
 
   # Kubelet HTTP health check
   health_check {
-    target              = "SSL:443"
-    healthy_threshold   = 2
-    unhealthy_threshold = 4
-    timeout             = 5
-    interval            = 6
-  }
+    protocol = "TCP"
+    port     = 443
 
-  idle_timeout                = 3600
-  connection_draining         = true
-  connection_draining_timeout = 300
+    # NLBs required to use same healthy and unhealthy thresholds
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+
+    # Interval between health checks required to be 10 or 30
+    interval = 10
+  }
+}
+
+# Attach controller instances to apiserver NLB
+resource "aws_lb_target_group_attachment" "controllers" {
+  count = "${var.controller_count}"
+
+  target_group_arn = "${aws_lb_target_group.controllers.arn}"
+  target_id        = "${element(aws_instance.controllers.*.private_ip, count.index)}"
+  port             = 443
 }

@@ -13,9 +13,9 @@ variable "dns_zone_id" {
   description = "AWS DNS Zone ID (e.g. Z3PAABBCFAKEC0)"
 }
 
-variable "ssh_authorized_key" {
-  type        = "string"
-  description = "SSH public key for user 'core'"
+variable "ssh_authorized_keys" {
+  type        = "list"
+  description = "SSH public keys for user 'core'"
 }
 
 variable "os_channel" {
@@ -114,4 +114,16 @@ variable "oidc_client_id" {
 variable "oidc_username_claim" {
   description = "JWT claim to use as the user name."
   type = "string"
+}
+
+variable "bastion_type" {
+  type        = "string"
+  default     = "t2.micro"
+  description = "Bastion EC2 instance type"
+}
+
+variable "bastion_count" {
+  type        = "string"
+  default     = "1"
+  description = "Number of bastion hosts to run"
 }
