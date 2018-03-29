@@ -12,3 +12,8 @@ output "bootstrap_controller_ip" {
   value       = "${aws_instance.controllers.0.private_ip}"
   description = "IP address of the controller instance used to bootstrap the cluster"
 }
+
+output "depends_id" {
+  value       = "${null_resource.bootkube-start.id}"
+  description = "Resource ID that will be defined when the cluster is ready"
+}
