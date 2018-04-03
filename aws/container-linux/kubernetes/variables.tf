@@ -127,3 +127,10 @@ variable "bastion_count" {
   default     = "1"
   description = "Number of bastion hosts to run"
 }
+
+variable "amis" {
+  description = "Static AMIs to use for different cluster roles. When no value is set for a role, the latest stable CoreOS AMI is used"
+  type        = "map"
+  # assign an empty string value so terraform can detect the value type for the map
+  default     = {"" = ""}
+}
