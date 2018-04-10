@@ -85,3 +85,11 @@ variable "cluster_domain_suffix" {
   type        = "string"
   default     = "cluster.local"
 }
+
+# Scoop variables
+
+variable "ami" {
+  type = "string"
+  description = "Custom AMI to use for launching workers (defaults to latest stable CoreOS)"
+  default = ""
+}

@@ -35,7 +35,7 @@ resource "aws_autoscaling_group" "workers" {
 
 # Worker template
 resource "aws_launch_configuration" "worker" {
-  image_id      = "${data.aws_ami.coreos.image_id}"
+  image_id      = "${coalesce(var.ami, data.aws_ami.coreos.image_id)}"
   instance_type = "${var.instance_type}"
 
   user_data = "${data.ct_config.worker_ign.rendered}"
