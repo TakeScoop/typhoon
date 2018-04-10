@@ -24,7 +24,7 @@ output "kubeconfig" {
   value = "${module.bootkube.kubeconfig}"
 }
 
-# Fork outputs
+# Scoop outputs
 
 output "bastion_dns_name" {
   value       = "${aws_lb.bastion.dns_name}"
