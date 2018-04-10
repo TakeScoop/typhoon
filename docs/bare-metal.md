@@ -1,6 +1,6 @@
 # Bare-Metal
 
-In this tutorial, we'll network boot and provision a Kubernetes v1.9.3 cluster on bare-metal.
+In this tutorial, we'll network boot and provision a Kubernetes v1.10.0 cluster on bare-metal.
 
 First, we'll deploy a [Matchbox](https://github.com/coreos/matchbox) service and setup a network boot environment. Then, we'll declare a Kubernetes cluster in Terraform using the Typhoon Terraform module and power on machines. On PXE boot, machines will install Container Linux to disk, reboot into the disk install, and provision themselves as Kubernetes controllers or workers.
 
@@ -22,10 +22,7 @@ Collect a MAC address from each machine. For machines with multiple PXE-enabled 
 * 52:54:00:b2:2f:86 (node2)
 * 52:54:00:c3:61:77 (node3)
 
-Configure each machine to boot from the disk [^1] through IPMI or the BIOS menu.
-
-
-[^1]: Configuring "diskless" workers that always PXE boot is possible, but not in the scope of this tutorial.
+Configure each machine to boot from the disk through IPMI or the BIOS menu.
 
 ```
 ipmitool -H node1 -U USER -P PASS chassis bootdev disk options=persistent
@@ -177,7 +174,7 @@ Define a Kubernetes cluster using the module `bare-metal/container-linux/kuberne
 
 ```tf
 module "bare-metal-mercury" {
-  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.9.3"
+  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.10.0"
   
   providers = {
     local = "local.default"
@@ -186,15 +183,16 @@ module "bare-metal-mercury" {
     tls = "tls.default"
   }
   
-  # install
+  # bare-metal
+  cluster_name            = "mercury"
   matchbox_http_endpoint  = "http://matchbox.example.com"
   container_linux_channel = "stable"
-  container_linux_version = "1576.5.0"
-  ssh_authorized_key      = "ssh-rsa AAAAB3Nz..."
+  container_linux_version = "1632.3.0"
 
-  # cluster
-  cluster_name    = "mercury"
-  k8s_domain_name = "node1.example.com"
+  # configuration
+  k8s_domain_name    = "node1.example.com"
+  ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
+  asset_dir          = "/home/user/.secrets/clusters/mercury"
 
   # machines
   controller_names   = ["node1"]
@@ -212,9 +210,6 @@ module "bare-metal-mercury" {
     "node2.example.com",
     "node3.example.com",
   ]
-
-  # output assets dir
-  asset_dir = "/home/user/.secrets/clusters/mercury"
 }
 ```
 
@@ -246,7 +241,7 @@ Get or update Terraform modules.
 $ terraform get            # downloads missing modules
 $ terraform get --update   # updates all modules
 Get: git::https://github.com/poseidon/typhoon (update)
-Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.10.0 (update)
+Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.11.0 (update)
 ```
 
 Plan the resources to be created.
@@ -259,6 +254,7 @@ Plan: 55 to add, 0 to change, 0 to destroy.
 Apply the changes. Terraform will generate bootkube assets to `asset_dir` and create Matchbox profiles (e.g. controller, worker) and matching rules via the Matchbox API.
 
 ```sh
+$ terraform apply
 module.bare-metal-mercury.null_resource.copy-kubeconfig.0: Provisioning with 'file'...
 module.bare-metal-mercury.null_resource.copy-etcd-secrets.0: Provisioning with 'file'...
 module.bare-metal-mercury.null_resource.copy-kubeconfig.0: Still creating... (10s elapsed)
@@ -296,10 +292,19 @@ module.bare-metal-mercury.null_resource.bootkube-start: Creation complete (ID: 5
 Apply complete! Resources: 55 added, 0 changed, 0 destroyed.
 ```
 
+To watch the install to disk (until machines reboot from disk), SSH to port 2222.
+
+```
+# before v1.10.1
+$ ssh debug@node1.example.com
+# after v1.10.1
+$ ssh -p 2222 core@node1.example.com
+```
+
 To watch the bootstrap process in detail, SSH to the first controller and journal the logs.
 
 ```
-$ ssh node1.example.com
+$ ssh core@node1.example.com
 $ journalctl -f -u bootkube
 bootkube[5]:         Pod Status:        pod-checkpointer        Running
 bootkube[5]:         Pod Status:          kube-apiserver        Running
@@ -317,9 +322,9 @@ bootkube[5]: Tearing down temporary bootstrap control plane...
 $ export KUBECONFIG=/home/user/.secrets/clusters/mercury/auth/kubeconfig
 $ kubectl get nodes
 NAME                STATUS    AGE       VERSION
-node1.example.com   Ready     11m       v1.9.3
-node2.example.com   Ready     11m       v1.9.3
-node3.example.com   Ready     11m       v1.9.3
+node1.example.com   Ready     11m       v1.10.0
+node2.example.com   Ready     11m       v1.10.0
+node3.example.com   Ready     11m       v1.10.0
 ```
 
 List the pods.
@@ -345,10 +350,10 @@ kube-system   pod-checkpointer-wf65d-node1.example.com   1/1       Running   0  
 
 ## Going Further
 
-Learn about [version pinning](concepts.md#versioning), [maintenance](topics/maintenance.md), and [addons](addons/overview.md).
+Learn about [maintenance](topics/maintenance.md) and [addons](addons/overview.md).
 
 !!! note
-    On Container Linux clusters, install the `container-linux-update-operator` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
+    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -356,19 +361,19 @@ Learn about [version pinning](concepts.md#versioning), [maintenance](topics/main
 
 | Name | Description | Example |
 |:-----|:------------|:--------|
+| cluster_name | Unique cluster name | mercury |
 | matchbox_http_endpoint | Matchbox HTTP read-only endpoint | http://matchbox.example.com:8080 |
 | container_linux_channel | Container Linux channel | stable, beta, alpha |
-| container_linux_version | Container Linux version of the kernel/initrd to PXE and the image to install | 1576.5.0 |
-| cluster_name | Cluster name | mercury |
+| container_linux_version | Container Linux version of the kernel/initrd to PXE and the image to install | 1632.3.0 |
 | k8s_domain_name | FQDN resolving to the controller(s) nodes. Workers and kubectl will communicate with this endpoint | "myk8s.example.com" |
-| ssh_authorized_key | SSH public key for ~/.ssh/authorized_keys | "ssh-rsa AAAAB3Nz..." |
+| ssh_authorized_key | SSH public key for user 'core' | "ssh-rsa AAAAB3Nz..." |
+| asset_dir | Path to a directory where generated assets should be placed (contains secrets) | "/home/user/.secrets/clusters/mercury" |
 | controller_names | Ordered list of controller short names | ["node1"] |
 | controller_macs | Ordered list of controller identifying MAC addresses | ["52:54:00:a1:9c:ae"] |
 | controller_domains | Ordered list of controller FQDNs | ["node1.example.com"] |
 | worker_names | Ordered list of worker short names | ["node2", "node3"] |
 | worker_macs | Ordered list of worker identifying MAC addresses | ["52:54:00:b2:2f:86", "52:54:00:c3:61:77"] |
 | worker_domains | Ordered list of worker FQDNs | ["node2.example.com", "node3.example.com"] |
-| asset_dir | Path to a directory where generated assets should be placed (contains secrets) | "/home/user/.secrets/clusters/mercury" |
 
 ### Optional
 
@@ -379,8 +384,8 @@ Learn about [version pinning](concepts.md#versioning), [maintenance](topics/main
 | container_linux_oem | Specify alternative OEM image ids for the disk install | "" | "vmware_raw", "xen" |
 | networking | Choice of networking provider | "calico" | "calico" or "flannel" |
 | network_mtu | CNI interface MTU (calico-only) | 1480 | - | 
-| pod_cidr | CIDR range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
-| service_cidr | CIDR range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
+| pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
+| service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
 | cluster_domain_suffix | FQDN suffix for Kubernetes services answered by kube-dns. | "cluster.local" | "k8s.example.com" |
 | kernel_args | Additional kernel args to provide at PXE boot | [] | "kvm-intel.nested=1" |
 

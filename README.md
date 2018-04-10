@@ -11,10 +11,11 @@ Typhoon distributes upstream Kubernetes, architectural conventions, and cluster 
 
 ## Features <a href="https://www.cncf.io/certification/software-conformance/"><img align="right" src="https://storage.googleapis.com/poseidon/certified-kubernetes.png"></a>
 
-* Kubernetes v1.9.3 (upstream, via [kubernetes-incubator/bootkube](https://github.com/kubernetes-incubator/bootkube))
+* Kubernetes v1.10.0 (upstream, via [kubernetes-incubator/bootkube](https://github.com/kubernetes-incubator/bootkube))
 * Single or multi-master, workloads isolated on workers, [Calico](https://www.projectcalico.org/) or [flannel](https://github.com/coreos/flannel) networking
 * On-cluster etcd with TLS, [RBAC](https://kubernetes.io/docs/admin/authorization/rbac/)-enabled, [network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
-* Ready for Ingress, Dashboards, Metrics, and other optional [addons](https://typhoon.psdn.io/addons/overview/)
+* Advanced features like [worker pools](https://typhoon.psdn.io/advanced/worker-pools/) and [preemption](https://typhoon.psdn.io/google-cloud/#preemption) (varies by platform)
+* Ready for Ingress, Prometheus, Grafana, and other optional [addons](https://typhoon.psdn.io/addons/overview/)
 
 ## Modules
 
@@ -22,7 +23,7 @@ Typhoon provides a Terraform Module for each supported operating system and plat
 
 | Platform      | Operating System | Terraform Module | Status |
 |---------------|------------------|------------------|--------|
-| AWS           | Container Linux  | [aws/container-linux/kubernetes](aws/container-linux/kubernetes) | beta |
+| AWS           | Container Linux  | [aws/container-linux/kubernetes](aws/container-linux/kubernetes) | stable |
 | Bare-Metal    | Container Linux  | [bare-metal/container-linux/kubernetes](bare-metal/container-linux/kubernetes) | stable |
 | Digital Ocean | Container Linux  | [digital-ocean/container-linux/kubernetes](digital-ocean/container-linux/kubernetes) | beta |
 | Google Cloud  | Container Linux  | [google-cloud/container-linux/kubernetes](google-cloud/container-linux/kubernetes) | beta |
@@ -43,29 +44,28 @@ Define a Kubernetes cluster by using the Terraform module for your chosen platfo
 
 ```tf
 module "google-cloud-yavin" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes"
+  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes?ref=v1.10.0"
   
   providers = {
-    google = "google.default"
-    local = "local.default"
-    null = "null.default"
+    google   = "google.default"
+    local    = "local.default"
+    null     = "null.default"
     template = "template.default"
-    tls = "tls.default"
+    tls      = "tls.default"
   }
 
   # Google Cloud
+  cluster_name  = "yavin"
   region        = "us-central1"
   dns_zone      = "example.com"
   dns_zone_name = "example-zone"
-  os_image      = "coreos-stable-1576-5-0-v20180105"
 
-  cluster_name       = "yavin"
-  controller_count   = 1
-  worker_count       = 2
+  # configuration
   ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
-
-  # output assets dir
-  asset_dir = "/home/user/.secrets/clusters/yavin"
+  asset_dir          = "/home/user/.secrets/clusters/yavin"
+  
+  # optional
+  worker_count = 2
 }
 ```
 
@@ -86,9 +86,9 @@ In 4-8 minutes (varies by platform), the cluster will be ready. This Google Clou
 $ export KUBECONFIG=/home/user/.secrets/clusters/yavin/auth/kubeconfig
 $ kubectl get nodes
 NAME                                          STATUS   AGE    VERSION
-yavin-controller-0.c.example-com.internal     Ready    6m     v1.9.3
-yavin-worker-jrbf.c.example-com.internal      Ready    5m     v1.9.3
-yavin-worker-mzdm.c.example-com.internal      Ready    5m     v1.9.3
+yavin-controller-0.c.example-com.internal     Ready    6m     v1.10.0
+yavin-worker-jrbf.c.example-com.internal      Ready    5m     v1.10.0
+yavin-worker-mzdm.c.example-com.internal      Ready    5m     v1.10.0
 ```
 
 List the pods.
@@ -123,11 +123,11 @@ Typhoon is strict about minimalism, maturity, and scope. These are not in scope:
 
 Ask questions on the IRC #typhoon channel on [freenode.net](http://freenode.net/).
 
-## Background
+## Motivation
 
 Typhoon powers the author's cloud and colocation clusters. The project has evolved through operational experience and Kubernetes changes. Typhoon is shared under a free license to allow others to use the work freely and contribute to its upkeep.
 
-Typhoon addresses real world needs, which you may share. It is honest about limitations or areas that aren't mature yet. It avoids buzzword bingo and hype. It does not aim to be the one-solution-fits-all distro. An ecosystem of free (or enterprise) Kubernetes distros is healthy.
+Typhoon addresses real world needs, which you may share. It is honest about limitations or areas that aren't mature yet. It avoids buzzword bingo and hype. It does not aim to be the one-solution-fits-all distro. An ecosystem of Kubernetes distributions is healthy.
 
 ## Social Contract
 
@@ -135,4 +135,6 @@ Typhoon is not a product, trial, or free-tier. It is not run by a company, does 
 
 Typhoon clusters will contain only [free](https://www.debian.org/intro/free) components. Cluster components will not collect data on users without their permission.
 
-*Disclosure: The author works for Red Hat (prev CoreOS), but Typhoon is unassociated and maintained independently.*
+## Donations
+
+Typhoon does not accept money donations. Instead, we encourage you to donate to one of [these organizations](https://github.com/poseidon/typhoon/wiki/Donations) to show your appreciation.

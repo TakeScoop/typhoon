@@ -1,6 +1,6 @@
 # AWS
 
-In this tutorial, we'll create a Kubernetes v1.9.3 cluster on AWS.
+In this tutorial, we'll create a Kubernetes v1.10.0 cluster on AWS.
 
 We'll declare a Kubernetes cluster in Terraform using the Typhoon Terraform module. On apply, a VPC, gateway, subnets, auto-scaling groups of controllers and workers, network load balancers for controllers and workers, and security groups will be created.
 
@@ -24,9 +24,9 @@ Terraform v0.11.1
 Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.0/terraform-provider-ct-v0.2.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.2.0-linux-amd64.tar.gz
-sudo mv terraform-provider-ct-v0.2.0-linux-amd64/terraform-provider-ct /usr/local/bin/
+wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.1/terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
+sudo mv terraform-provider-ct-v0.2.1-linux-amd64/terraform-provider-ct /usr/local/bin/
 ```
 
 Add the plugin to your `~/.terraformrc`.
@@ -57,7 +57,7 @@ Configure the AWS provider to use your access key credentials in a `providers.tf
 
 ```tf
 provider "aws" {
-  version = "~> 1.5.0"
+  version = "~> 1.11.0"
   alias   = "default"
 
   region                  = "eu-central-1"
@@ -96,7 +96,7 @@ Define a Kubernetes cluster using the module `aws/container-linux/kubernetes`.
 
 ```tf
 module "aws-tempest" {
-  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes?ref=v1.9.3"
+  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes?ref=v1.10.0"
 
   providers = {
     aws = "aws.default"
@@ -105,20 +105,19 @@ module "aws-tempest" {
     template = "template.default"
     tls = "tls.default"
   }
-  
-  cluster_name = "tempest"
 
   # AWS
-  dns_zone           = "aws.example.com"
-  dns_zone_id        = "Z3PAABBCFAKEC0"
-  controller_count   = 1
-  controller_type    = "t2.medium"
-  worker_count       = 2
-  worker_type        = "t2.small"
-  ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
+  cluster_name = "tempest"
+  dns_zone     = "aws.example.com"
+  dns_zone_id  = "Z3PAABBCFAKEC0"
 
-  # bootkube
-  asset_dir  = "/home/user/.secrets/clusters/tempest"
+  # configuration
+  ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
+  asset_dir          = "/home/user/.secrets/clusters/tempest"
+
+  # optional
+  worker_count = 2
+  worker_type  = "t2.medium"
 }
 ```
 
@@ -150,7 +149,7 @@ Get or update Terraform modules.
 $ terraform get            # downloads missing modules
 $ terraform get --update   # updates all modules
 Get: git::https://github.com/poseidon/typhoon (update)
-Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.10.0 (update)
+Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.11.0 (update)
 ```
 
 Plan the resources to be created.
@@ -182,9 +181,9 @@ In 4-8 minutes, the Kubernetes cluster will be ready.
 $ export KUBECONFIG=/home/user/.secrets/clusters/tempest/auth/kubeconfig
 $ kubectl get nodes
 NAME             STATUS    AGE       VERSION        
-ip-10-0-12-221   Ready     34m       v1.9.3
-ip-10-0-19-112   Ready     34m       v1.9.3
-ip-10-0-4-22     Ready     34m       v1.9.3
+ip-10-0-12-221   Ready     34m       v1.10.0
+ip-10-0-19-112   Ready     34m       v1.10.0
+ip-10-0-4-22     Ready     34m       v1.10.0
 ```
 
 List the pods.
@@ -210,10 +209,10 @@ kube-system   pod-checkpointer-4kxtl-ip-10-0-12-221     1/1    Running   0      
 
 ## Going Further
 
-Learn about [version pinning](concepts.md#versioning), [maintenance](topics/maintenance.md), and [addons](addons/overview.md).
+Learn about [maintenance](topics/maintenance.md) and [addons](addons/overview.md).
 
 !!! note
-    On Container Linux clusters, install the `container-linux-update-operator` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
+    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -225,7 +224,6 @@ Learn about [version pinning](concepts.md#versioning), [maintenance](topics/main
 | dns_zone | AWS Route53 DNS zone | "aws.example.com" |
 | dns_zone_id | AWS Route53 DNS zone id | "Z3PAABBCFAKEC0" |
 | ssh_authorized_key | SSH public key for ~/.ssh_authorized_keys | "ssh-rsa AAAAB3NZ..." |
-| os_channel | Container Linux AMI channel | stable, beta, alpha |
 | asset_dir | Path to a directory where generated assets should be placed (contains secrets) | "/home/user/.secrets/clusters/tempest" |
 
 #### DNS Zone
@@ -250,15 +248,19 @@ Reference the DNS zone id with `"${aws_route53_zone.zone-for-clusters.zone_id}"`
 | Name | Description | Default | Example |
 |:-----|:------------|:--------|:--------|
 | controller_count | Number of controllers (i.e. masters) | 1 | 1 |
-| controller_type | Controller EC2 instance type | "t2.small" | "t2.medium" |
 | worker_count | Number of workers | 1 | 3 |
-| worker_type | Worker EC2 instance type | "t2.small" | "t2.medium" |
+| controller_type | EC2 instance type for controllers | "t2.small" | See below |
+| worker_type | EC2 instance type for workers | "t2.small" | See below |
+| os_channel | Container Linux AMI channel | stable | stable, beta, alpha |
 | disk_size | Size of the EBS volume in GB | "40" | "100" |
+| disk_type | Type of the EBS volume | "gp2" | standard, gp2, io1 |
+| controller_clc_snippets | Controller Container Linux Config snippets | [] | |
+| worker_clc_snippets | Worker Container Linux Config snippets | [] | |
 | networking | Choice of networking provider | "calico" | "calico" or "flannel" |
 | network_mtu | CNI interface MTU (calico only) | 1480 | 8981 |
-| host_cidr | CIDR range to assign to EC2 instances | "10.0.0.0/16" | "10.1.0.0/16" |
-| pod_cidr | CIDR range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
-| service_cidr | CIDR range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
+| host_cidr | CIDR IPv4 range to assign to EC2 instances | "10.0.0.0/16" | "10.1.0.0/16" |
+| pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
+| service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
 | cluster_domain_suffix | FQDN suffix for Kubernetes services answered by kube-dns. | "cluster.local" | "k8s.example.com" |
 
 Check the list of valid [instance types](https://aws.amazon.com/ec2/instance-types/).

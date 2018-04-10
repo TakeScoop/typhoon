@@ -1,13 +1,15 @@
 # Network Load Balancer for Ingress
 resource "aws_lb" "ingress" {
-  name               = "${var.cluster_name}-ingress"
+  name               = "${var.name}-ingress"
   load_balancer_type = "network"
   internal           = false
 
-  subnets = ["${aws_subnet.public.*.id}"]
+  subnets = ["${var.subnet_ids}"]
+
+  enable_cross_zone_load_balancing = true
 }
 
-# Forward HTTP traffic to instances
+# Forward HTTP traffic to workers
 resource "aws_lb_listener" "ingress-http" {
   load_balancer_arn = "${aws_lb.ingress.arn}"
   protocol          = "TCP"
@@ -19,7 +21,7 @@ resource "aws_lb_listener" "ingress-http" {
   }
 }
 
-# Forward HTTPS traffic to instances
+# Forward HTTPS traffic to workers
 resource "aws_lb_listener" "ingress-https" {
   load_balancer_arn = "${aws_lb.ingress.arn}"
   protocol          = "TCP"
@@ -34,8 +36,8 @@ resource "aws_lb_listener" "ingress-https" {
 # Network Load Balancer target groups of instances
 
 resource "aws_lb_target_group" "workers-http" {
-  name        = "${var.cluster_name}-workers-http"
-  vpc_id      = "${aws_vpc.network.id}"
+  name        = "${var.name}-workers-http"
+  vpc_id      = "${var.vpc_id}"
   target_type = "instance"
 
   protocol = "TCP"
@@ -57,8 +59,8 @@ resource "aws_lb_target_group" "workers-http" {
 }
 
 resource "aws_lb_target_group" "workers-https" {
-  name        = "${var.cluster_name}-workers-https"
-  vpc_id      = "${aws_vpc.network.id}"
+  name        = "${var.name}-workers-https"
+  vpc_id      = "${var.vpc_id}"
   target_type = "instance"
 
   protocol = "TCP"

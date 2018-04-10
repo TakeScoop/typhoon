@@ -1,6 +1,6 @@
 # Digital Ocean
 
-In this tutorial, we'll create a Kubernetes v1.9.3 cluster on Digital Ocean.
+In this tutorial, we'll create a Kubernetes v1.10.0 cluster on Digital Ocean.
 
 We'll declare a Kubernetes cluster in Terraform using the Typhoon Terraform module. On apply, firewall rules, DNS records, tags, and droplets for Kubernetes controllers and workers will be created.
 
@@ -24,9 +24,9 @@ Terraform v0.11.1
 Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.0/terraform-provider-ct-v0.2.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.2.0-linux-amd64.tar.gz
-sudo mv terraform-provider-ct-v0.2.0-linux-amd64/terraform-provider-ct /usr/local/bin/
+wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.1/terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
+sudo mv terraform-provider-ct-v0.2.1-linux-amd64/terraform-provider-ct /usr/local/bin/
 ```
 
 Add the plugin to your `~/.terraformrc`.
@@ -90,7 +90,7 @@ Define a Kubernetes cluster using the module `digital-ocean/container-linux/kube
 
 ```tf
 module "digital-ocean-nemo" {
-  source = "git::https://github.com/poseidon/typhoon//digital-ocean/container-linux/kubernetes?ref=v1.9.3"
+  source = "git::https://github.com/poseidon/typhoon//digital-ocean/container-linux/kubernetes?ref=v1.10.0"
   
   providers = {
     digitalocean = "digitalocean.default"
@@ -100,19 +100,18 @@ module "digital-ocean-nemo" {
     tls = "tls.default"
   }
 
-  region   = "nyc3"
-  dns_zone = "digital-ocean.example.com"
+  # Digital Ocean
+  cluster_name = "nemo"
+  region       = "nyc3"
+  dns_zone     = "digital-ocean.example.com"
 
-  cluster_name     = "nemo"
-  image            = "coreos-stable"
-  controller_count = 1
-  controller_type  = "s-2vcpu-2gb"
-  worker_count     = 2
-  worker_type      = "s-1vcpu-1gb"
+  # configuration
   ssh_fingerprints = ["d7:9d:79:ae:56:32:73:79:95:88:e3:a2:ab:5d:45:e7"]
-
-  # output assets dir
-  asset_dir = "/home/user/.secrets/clusters/nemo"
+  asset_dir        = "/home/user/.secrets/clusters/nemo"
+  
+  # optional
+  worker_count = 2
+  worker_type  = "s-1vcpu-1gb"
 }
 ```
 
@@ -144,7 +143,7 @@ Get or update Terraform modules.
 $ terraform get            # downloads missing modules
 $ terraform get --update   # updates all modules
 Get: git::https://github.com/poseidon/typhoon (update)
-Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.10.0 (update)
+Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.11.0 (update)
 ```
 
 Plan the resources to be created.
@@ -177,9 +176,9 @@ In 3-6 minutes, the Kubernetes cluster will be ready.
 $ export KUBECONFIG=/home/user/.secrets/clusters/nemo/auth/kubeconfig
 $ kubectl get nodes
 NAME             STATUS    AGE       VERSION
-10.132.110.130   Ready     10m       v1.9.3
-10.132.115.81    Ready     10m       v1.9.3
-10.132.124.107   Ready     10m       v1.9.3
+10.132.110.130   Ready     10m       v1.10.0
+10.132.115.81    Ready     10m       v1.10.0
+10.132.124.107   Ready     10m       v1.10.0
 ```
 
 List the pods.
@@ -204,10 +203,10 @@ kube-system   pod-checkpointer-pr1lq-10.132.115.81       1/1       Running   0  
 
 ## Going Further
 
-Learn about [version pinning](concepts.md#versioning), [maintenance](topics/maintenance.md), and [addons](addons/overview.md).
+Learn about [maintenance](topics/maintenance.md) and [addons](addons/overview.md).
 
 !!! note
-    On Container Linux clusters, install the `container-linux-update-operator` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
+    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -243,8 +242,8 @@ resource "digitalocean_domain" "zone-for-clusters" {
 DigitalOcean droplets are created with your SSH public key "fingerprint" (i.e. MD5 hash) to allow access. If your SSH public key is at `~/.ssh/id_rsa`, find the fingerprint with,
 
 ```bash
-ssh-keygen -lf ~/.ssh/id_rsa.pub | awk '{print $2}'
-d7:9d:79:ae:56:32:73:79:95:88:e3:a2:ab:5d:45:e7
+ssh-keygen -E md5 -lf ~/.ssh/id_rsa.pub | awk '{print $2}'
+MD5:d7:9d:79:ae:56:32:73:79:95:88:e3:a2:ab:5d:45:e7
 ```
 
 If you use `ssh-agent` (e.g. Yubikey for SSH), find the fingerprint with,
@@ -254,26 +253,24 @@ ssh-add -l -E md5
 2048 MD5:d7:9d:79:ae:56:32:73:79:95:88:e3:a2:ab:5d:45:e7 cardno:000603633110 (RSA)
 ```
 
-If you uploaded an SSH key to DigitalOcean (not required), find the fingerprint under Settings -> Security. Finally, if you don't have an SSH key, [create one now](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/).
+Digital Ocean requires the SSH public key be uploaded to your account, so you may also find the fingerprint under Settings -> Security. Finally, if you don't have an SSH key, [create one now](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/).
 
 ### Optional
 
 | Name | Description | Default | Example |
 |:-----|:------------|:--------|:--------|
-| image | OS image for droplets | "coreos-stable" | coreos-stable, coreos-beta, coreos-alpha |
 | controller_count | Number of controllers (i.e. masters) | 1 | 1 |
-| controller_type | Digital Ocean droplet size | s-2vcpu-2gb | s-2vcpu-2gb, s-2vcpu-4gb, s-4vcpu-8gb, ... |
 | worker_count | Number of workers | 1 | 3 |
-| worker_type | Digital Ocean droplet size | s-1vcpu-1gb | s-1vcpu-1gb, s-1vcpu-2gb, s-2vcpu-2gb, ... |
-| networking | Choice of networking provider | "flannel" | "flannel" |
-| pod_cidr | CIDR range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
-| service_cidr | CIDR range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
+| controller_type | Droplet type for controllers | s-2vcpu-2gb | s-2vcpu-2gb, s-2vcpu-4gb, s-4vcpu-8gb, ... |
+| worker_type | Droplet type for workers | s-1vcpu-1gb | s-1vcpu-1gb, s-1vcpu-2gb, s-2vcpu-2gb, ... |
+| image | Container Linux image for instances | "coreos-stable" | coreos-stable, coreos-beta, coreos-alpha |
+| controller_clc_snippets | Controller Container Linux Config snippets | [] | |
+| worker_clc_snippets | Worker Container Linux Config snippets | [] | |
+| pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
+| service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
 | cluster_domain_suffix | FQDN suffix for Kubernetes services answered by kube-dns. | "cluster.local" | "k8s.example.com" |
 
-You can see all valid droplet sizes [on DigitalOcean's website](https://developers.digitalocean.com/documentation/changelog/api-v2/new-size-slugs-for-droplet-plan-changes/) or by [using their `doctl` command-line tool](https://github.com/digitalocean/doctl) via `doctl compute size list`.
+Check the list of valid [droplet types](https://developers.digitalocean.com/documentation/changelog/api-v2/new-size-slugs-for-droplet-plan-changes/) or use `doctl compute size list`.
 
 !!! warning
     Do not choose a `controller_type` smaller than 2GB. Smaller droplets are not sufficient for running a controller and bootstrapping will fail.
-
-!!! bug
-    Digital Ocean firewalls do not yet support the IP tunneling (IP in IP) protocol used by Calico. You can try using "calico" for `networking`, but it will only work if the cloud firewall is removed (unsafe).

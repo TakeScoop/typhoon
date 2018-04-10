@@ -1,6 +1,6 @@
 # Google Cloud
 
-In this tutorial, we'll create a Kubernetes v1.9.3 cluster on Google Compute Engine (not GKE).
+In this tutorial, we'll create a Kubernetes v1.10.0 cluster on Google Compute Engine (not GKE).
 
 We'll declare a Kubernetes cluster in Terraform using the Typhoon Terraform module. On apply, a network, firewall rules, managed instance groups of Kubernetes controllers and workers, network load balancers for controllers and workers, and health checks will be created.
 
@@ -24,9 +24,9 @@ Terraform v0.11.1
 Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.0/terraform-provider-ct-v0.2.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.2.0-linux-amd64.tar.gz
-sudo mv terraform-provider-ct-v0.2.0-linux-amd64/terraform-provider-ct /usr/local/bin/
+wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.1/terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
+sudo mv terraform-provider-ct-v0.2.1-linux-amd64/terraform-provider-ct /usr/local/bin/
 ```
 
 Add the plugin to your `~/.terraformrc`.
@@ -57,7 +57,7 @@ Configure the Google Cloud provider to use your service account key, project-id,
 
 ```tf
 provider "google" {
-  version = "1.2"
+  version = "1.6"
   alias   = "default"
 
   credentials = "${file("~/.config/google-cloud/terraform.json")}"
@@ -97,29 +97,28 @@ Define a Kubernetes cluster using the module `google-cloud/container-linux/kuber
 
 ```tf
 module "google-cloud-yavin" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes?ref=v1.9.3"
+  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes?ref=v1.10.0"
   
   providers = {
-    google = "google.default"
-    local = "local.default"
-    null = "null.default"
+    google   = "google.default"
+    local    = "local.default"
+    null     = "null.default"
     template = "template.default"
-    tls = "tls.default"
+    tls      = "tls.default"
   }
 
   # Google Cloud
+  cluster_name  = "yavin"
   region        = "us-central1"
   dns_zone      = "example.com"
   dns_zone_name = "example-zone"
-  os_image      = "coreos-stable-1576-5-0-v20180105"
 
-  cluster_name       = "yavin"
-  controller_count   = 1
-  worker_count       = 2
+  # configuration
   ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
-
-  # output assets dir
-  asset_dir = "/home/user/.secrets/clusters/yavin"
+  asset_dir          = "/home/user/.secrets/clusters/yavin"
+  
+  # optional
+  worker_count = 2
 }
 ```
 
@@ -151,7 +150,7 @@ Get or update Terraform modules.
 $ terraform get            # downloads missing modules
 $ terraform get --update   # updates all modules
 Get: git::https://github.com/poseidon/typhoon (update)
-Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.10.0 (update)
+Get: git::https://github.com/poseidon/bootkube-terraform.git?ref=v0.11.0 (update)
 ```
 
 Plan the resources to be created.
@@ -185,9 +184,9 @@ In 4-8 minutes, the Kubernetes cluster will be ready.
 $ export KUBECONFIG=/home/user/.secrets/clusters/yavin/auth/kubeconfig
 $ kubectl get nodes
 NAME                                          STATUS   AGE    VERSION
-yavin-controller-0.c.example-com.internal     Ready    6m     v1.9.3
-yavin-worker-jrbf.c.example-com.internal      Ready    5m     v1.9.3
-yavin-worker-mzdm.c.example-com.internal      Ready    5m     v1.9.3
+yavin-controller-0.c.example-com.internal     Ready    6m     v1.10.0
+yavin-worker-jrbf.c.example-com.internal      Ready    5m     v1.10.0
+yavin-worker-mzdm.c.example-com.internal      Ready    5m     v1.10.0
 ```
 
 List the pods.
@@ -212,10 +211,10 @@ kube-system   pod-checkpointer-l6lrt                    1/1    Running   0      
 
 ## Going Further
 
-Learn about [version pinning](concepts.md#versioning), [maintenance](topics/maintenance.md), and [addons](addons/overview.md).
+Learn about [maintenance](topics/maintenance.md) and [addons](addons/overview.md).
 
 !!! note
-    On Container Linux clusters, install the `container-linux-update-operator` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
+    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -227,8 +226,7 @@ Learn about [version pinning](concepts.md#versioning), [maintenance](topics/main
 | region | Google Cloud region | "us-central1" |
 | dns_zone | Google Cloud DNS zone | "google-cloud.example.com" |
 | dns_zone_name | Google Cloud DNS zone name | "example-zone" |
-| ssh_authorized_key | SSH public key for ~/.ssh_authorized_keys | "ssh-rsa AAAAB3NZ..." |
-| os_image | OS image for compute instances | "coreos-stable-1576-5-0-v20180105" |
+| ssh_authorized_key | SSH public key for user 'core' | "ssh-rsa AAAAB3NZ..." |
 | asset_dir | Path to a directory where generated assets should be placed (contains secrets) | "/home/user/.secrets/clusters/yavin" |
 
 Check the list of valid [regions](https://cloud.google.com/compute/docs/regions-zones/regions-zones) and list Container Linux [images](https://cloud.google.com/compute/docs/images) with `gcloud compute images list | grep coreos`.
@@ -254,13 +252,18 @@ resource "google_dns_managed_zone" "zone-for-clusters" {
 
 | Name | Description | Default | Example |
 |:-----|:------------|:--------|:--------|
-| machine_type | Machine type for compute instances | "n1-standard-1" | See below |
 | controller_count | Number of controllers (i.e. masters) | 1 | 1 |
 | worker_count | Number of workers | 1 | 3 |
-| worker_preemptible | If enabled, Compute Engine will terminate controllers randomly within 24 hours | false | true |
+| controller_type | Machine type for controllers | "n1-standard-1" | See below |
+| worker_type | Machine type for workers | "n1-standard-1" | See below |
+| os_image | Container Linux image for compute instances | "coreos-stable" | "coreos-stable-1632-3-0-v20180215" |
+| disk_size | Size of the disk in GB | 40 | 100 |
+| worker_preemptible | If enabled, Compute Engine will terminate workers randomly within 24 hours | false | true |
+| controller_clc_snippets | Controller Container Linux Config snippets | [] | |
+| worker_clc_snippets | Worker Container Linux Config snippets | [] | |
 | networking | Choice of networking provider | "calico" | "calico" or "flannel" |
-| pod_cidr | CIDR range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
-| service_cidr | CIDR range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
+| pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
+| service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
 | cluster_domain_suffix | FQDN suffix for Kubernetes services answered by kube-dns. | "cluster.local" | "k8s.example.com" |
 
 Check the list of valid [machine types](https://cloud.google.com/compute/docs/machine-types).
