@@ -55,7 +55,7 @@ data "template_file" "bastion_config" {
   template = "${file("${path.module}/cl/bastion.yaml.tmpl")}"
 
   vars = {
-    ssh_authorized_keys_list = "[ ${join(", ", var.ssh_authorized_keys)} ]"
+    ssh_authorized_key = "${var.ssh_authorized_key}"
   }
 }
 
