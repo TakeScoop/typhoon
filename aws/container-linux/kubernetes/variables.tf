@@ -125,19 +125,10 @@ variable "cluster_domain_suffix" {
 
 # Scoop variables
 
-variable "oidc_issuer_url" {
-  description = "URL of the provider which allows the API server to discover public signing keys"
-  type = "string"
-}
-
-variable "oidc_client_id" {
-  description = "A client id that all tokens must be issued for"
-  type = "string"
-}
-
-variable "oidc_username_claim" {
-  description = "JWT claim to use as the user name."
-  type = "string"
+variable "apiserver_arguments" {
+  type = "list"
+  default = []
+  description = "Custom arguments to pass to the kube-apiserver"
 }
 
 variable "bastion_type" {
