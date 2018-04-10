@@ -26,7 +26,7 @@ resource "digitalocean_droplet" "workers" {
   private_networking = true
 
   user_data = "${data.ct_config.worker_ign.rendered}"
-  ssh_keys  = "${var.ssh_fingerprints}"
+  ssh_keys  = ["${var.ssh_fingerprints}"]
 
   tags = [
     "${digitalocean_tag.workers.id}",
@@ -44,7 +44,6 @@ data "template_file" "worker_config" {
 
   vars = {
     k8s_dns_service_ip    = "${cidrhost(var.service_cidr, 10)}"
-    k8s_etcd_service_ip   = "${cidrhost(var.service_cidr, 15)}"
     cluster_domain_suffix = "${var.cluster_domain_suffix}"
   }
 }
@@ -52,4 +51,5 @@ data "template_file" "worker_config" {
 data "ct_config" "worker_ign" {
   content      = "${data.template_file.worker_config.rendered}"
   pretty_print = false
+  snippets     = ["${var.worker_clc_snippets}"]
 }

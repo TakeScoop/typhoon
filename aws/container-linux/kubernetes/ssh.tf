@@ -1,5 +1,5 @@
-# Secure copy etcd TLS assets and kubeconfig to controllers. Activates kubelet.service
-resource "null_resource" "copy-secrets" {
+# Secure copy etcd TLS assets to controllers.
+resource "null_resource" "copy-controller-secrets" {
   count = "${var.controller_count}"
 
   connection {
@@ -12,11 +12,6 @@ resource "null_resource" "copy-secrets" {
     bastion_user = "core"
 
     timeout = "15m"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.kubeconfig}"
-    destination = "$HOME/kubeconfig"
   }
 
   provisioner "file" {
@@ -66,7 +61,6 @@ resource "null_resource" "copy-secrets" {
       "sudo mv etcd-peer.key /etc/ssl/etcd/etcd/peer.key",
       "sudo chown -R etcd:etcd /etc/ssl/etcd",
       "sudo chmod -R 500 /etc/ssl/etcd",
-      "sudo mv /home/core/kubeconfig /etc/kubernetes/kubeconfig",
     ]
   }
 }
@@ -74,7 +68,12 @@ resource "null_resource" "copy-secrets" {
 # Secure copy bootkube assets to ONE controller and start bootkube to perform
 # one-time self-hosted cluster bootstrapping.
 resource "null_resource" "bootkube-start" {
-  depends_on = ["module.bootkube", "null_resource.copy-secrets", "aws_route53_record.apiserver"]
+  depends_on = [
+    "module.bootkube",
+    "module.workers",
+    "aws_route53_record.apiserver",
+    "null_resource.copy-controller-secrets",
+  ]
 
   connection {
     type    = "ssh"
@@ -95,7 +94,7 @@ resource "null_resource" "bootkube-start" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo mv /home/core/assets /opt/bootkube",
+      "sudo mv $HOME/assets /opt/bootkube",
       "sudo systemctl start bootkube",
     ]
   }

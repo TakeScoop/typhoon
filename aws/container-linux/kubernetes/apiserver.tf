@@ -17,9 +17,11 @@ resource "aws_route53_record" "apiserver" {
 resource "aws_lb" "apiserver" {
   name               = "${var.cluster_name}-apiserver"
   load_balancer_type = "network"
-  internal           = true
+  internal           = false
 
-  subnets = ["${aws_subnet.private.*.id}"]
+  subnets = ["${aws_subnet.public.*.id}"]
+
+  enable_cross_zone_load_balancing = true
 }
 
 # Forward HTTP traffic to controllers
@@ -38,7 +40,7 @@ resource "aws_lb_listener" "apiserver-https" {
 resource "aws_lb_target_group" "controllers" {
   name        = "${var.cluster_name}-controllers"
   vpc_id      = "${aws_vpc.network.id}"
-  target_type = "ip"
+  target_type = "instance"
 
   protocol = "TCP"
   port     = 443
@@ -62,6 +64,6 @@ resource "aws_lb_target_group_attachment" "controllers" {
   count = "${var.controller_count}"
 
   target_group_arn = "${aws_lb_target_group.controllers.arn}"
-  target_id        = "${element(aws_instance.controllers.*.private_ip, count.index)}"
+  target_id        = "${element(aws_instance.controllers.*.id, count.index)}"
   port             = 443
 }

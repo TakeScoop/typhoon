@@ -1,44 +1,49 @@
-variable "cluster_name" {
+variable "name" {
   type        = "string"
-  description = "Unique cluster name"
+  description = "Unique name for the worker pool"
 }
 
-variable "ssh_authorized_key" {
+variable "cluster_name" {
   type        = "string"
-  description = "SSH public key for logging in as user 'core'"
+  description = "Must be set to `cluster_name of cluster`"
+}
+
+# Google Cloud
+
+variable "region" {
+  type        = "string"
+  description = "Must be set to `region` of cluster"
 }
 
 variable "network" {
   type        = "string"
-  description = "Name of the network to attach to the compute instance interfaces"
+  description = "Must be set to `network_name` output by cluster"
 }
 
 # instances
 
 variable "count" {
   type        = "string"
+  default     = "1"
   description = "Number of worker compute instances the instance group should manage"
-}
-
-variable "region" {
-  type        = "string"
-  description = "Google Cloud region (e.g. us-central1, see `gcloud compute regions list`)."
 }
 
 variable "machine_type" {
   type        = "string"
+  default     = "n1-standard-1"
   description = "Machine type for compute instances (e.g. gcloud compute machine-types list)"
 }
 
 variable "os_image" {
   type        = "string"
-  description = "OS image from which to initialize the disk (e.g. gcloud compute images list)"
+  default     = "coreos-stable"
+  description = "Container Linux image for compute instanges (e.g. gcloud compute images list)"
 }
 
 variable "disk_size" {
   type        = "string"
   default     = "40"
-  description = "The size of the disk in gigabytes."
+  description = "Size of the disk in GB"
 }
 
 variable "preemptible" {
@@ -49,9 +54,19 @@ variable "preemptible" {
 
 # configuration
 
+variable "kubeconfig" {
+  type        = "string"
+  description = "Must be set to `kubeconfig` output by cluster"
+}
+
+variable "ssh_authorized_key" {
+  type        = "string"
+  description = "SSH public key for user 'core'"
+}
+
 variable "service_cidr" {
   description = <<EOD
-CIDR IP range to assign Kubernetes services.
+CIDR IPv4 range to assign Kubernetes services.
 The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for kube-dns.
 EOD
 
@@ -65,24 +80,22 @@ variable "cluster_domain_suffix" {
   default     = "cluster.local"
 }
 
-# kubeconfig
-
-variable "kubeconfig_ca_cert" {
-  type        = "string"
-  description = "Generated kubeconfig CA certificate"
+variable "clc_snippets" {
+  type        = "list"
+  description = "Container Linux Config snippets"
+  default     = []
 }
 
-variable "kubeconfig_kubelet_cert" {
+# unofficial, undocumented, unsupported, temporary
+
+variable "accelerator_type" {
   type        = "string"
-  description = "Generated kubeconfig kubelet certificate"
+  default     = ""
+  description = "Google Compute Engine accelerator type (e.g. nvidia-tesla-k80, see gcloud compute accelerator-types list)"
 }
 
-variable "kubeconfig_kubelet_key" {
+variable "accelerator_count" {
   type        = "string"
-  description = "Generated kubeconfig kubelet private key"
-}
-
-variable "kubeconfig_server" {
-  type        = "string"
-  description = "Generated kubeconfig server"
+  default     = "0"
+  description = "Number of compute engine accelerators"
 }

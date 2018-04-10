@@ -45,7 +45,7 @@ resource "digitalocean_droplet" "controllers" {
   private_networking = true
 
   user_data = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
-  ssh_keys  = "${var.ssh_fingerprints}"
+  ssh_keys  = ["${var.ssh_fingerprints}"]
 
   tags = [
     "${digitalocean_tag.controllers.id}",
@@ -90,4 +90,6 @@ data "ct_config" "controller_ign" {
   count        = "${var.controller_count}"
   content      = "${element(data.template_file.controller_config.*.rendered, count.index)}"
   pretty_print = false
+
+  snippets = ["${var.controller_clc_snippets}"]
 }

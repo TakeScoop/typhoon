@@ -1,7 +1,9 @@
 variable "cluster_name" {
   type        = "string"
-  description = "Cluster name"
+  description = "Unique cluster name (prepended to dns_zone)"
 }
+
+# Google Cloud
 
 variable "region" {
   type        = "string"
@@ -10,34 +12,20 @@ variable "region" {
 
 variable "dns_zone" {
   type        = "string"
-  description = "Google Cloud DNS Zone (e.g. google-cloud.dghubble.io)"
+  description = "Google Cloud DNS Zone (e.g. google-cloud.example.com)"
 }
 
 variable "dns_zone_name" {
   type        = "string"
-  description = "Google Cloud DNS Zone name (e.g. google-cloud-prod-zone)"
+  description = "Google Cloud DNS Zone name (e.g. example-zone)"
 }
 
-variable "ssh_authorized_key" {
-  type        = "string"
-  description = "SSH public key for user 'core'"
-}
-
-variable "machine_type" {
-  type        = "string"
-  default     = "n1-standard-1"
-  description = "Machine type for compute instances (see `gcloud compute machine-types list`)"
-}
-
-variable "os_image" {
-  type        = "string"
-  description = "OS image from which to initialize the disk (see `gcloud compute images list`)"
-}
+# instances
 
 variable "controller_count" {
   type        = "string"
   default     = "1"
-  description = "Number of controllers"
+  description = "Number of controllers (i.e. masters)"
 }
 
 variable "worker_count" {
@@ -46,13 +34,54 @@ variable "worker_count" {
   description = "Number of workers"
 }
 
+variable controller_type {
+  type        = "string"
+  default     = "n1-standard-1"
+  description = "Machine type for controllers (see `gcloud compute machine-types list`)"
+}
+
+variable worker_type {
+  type        = "string"
+  default     = "n1-standard-1"
+  description = "Machine type for controllers (see `gcloud compute machine-types list`)"
+}
+
+variable "os_image" {
+  type        = "string"
+  default     = "coreos-stable"
+  description = "Container Linux image for compute instances (e.g. coreos-stable)"
+}
+
+variable "disk_size" {
+  type        = "string"
+  default     = "40"
+  description = "Size of the disk in GB"
+}
+
 variable "worker_preemptible" {
   type        = "string"
   default     = "false"
   description = "If enabled, Compute Engine will terminate workers randomly within 24 hours"
 }
 
-# bootkube assets
+variable "controller_clc_snippets" {
+  type        = "list"
+  description = "Controller Container Linux Config snippets"
+  default     = []
+}
+
+variable "worker_clc_snippets" {
+  type        = "list"
+  description = "Worker Container Linux Config snippets"
+  default     = []
+}
+
+# configuration
+
+variable "ssh_authorized_key" {
+  type        = "string"
+  description = "SSH public key for user 'core'"
+}
 
 variable "asset_dir" {
   description = "Path to a directory where generated assets should be placed (contains secrets)"
@@ -66,14 +95,14 @@ variable "networking" {
 }
 
 variable "pod_cidr" {
-  description = "CIDR IP range to assign Kubernetes pods"
+  description = "CIDR IPv4 range to assign Kubernetes pods"
   type        = "string"
   default     = "10.2.0.0/16"
 }
 
 variable "service_cidr" {
   description = <<EOD
-CIDR IP range to assign Kubernetes services.
+CIDR IPv4 range to assign Kubernetes services.
 The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for kube-dns.
 EOD
 

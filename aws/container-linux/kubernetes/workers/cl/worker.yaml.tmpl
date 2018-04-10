@@ -5,15 +5,6 @@ systemd:
       enable: true
     - name: locksmithd.service
       mask: true
-    - name: kubelet.path
-      enable: true
-      contents: |
-        [Unit]
-        Description=Watch for kubeconfig
-        [Path]
-        PathExists=/etc/kubernetes/kubeconfig
-        [Install]
-        WantedBy=multi-user.target
     - name: wait-for-dns.service
       enable: true
       contents: |
@@ -28,6 +19,7 @@ systemd:
         [Install]
         RequiredBy=kubelet.service
     - name: kubelet.service
+      enable: true
       contents: |
         [Unit]
         Description=Kubelet via Hyperkube
@@ -57,11 +49,10 @@ systemd:
           --allow-privileged \
           --anonymous-auth=false \
           --client-ca-file=/etc/kubernetes/ca.crt \
-          --cluster_dns={{.k8s_dns_service_ip}} \
-          --cluster_domain={{.cluster_domain_suffix}} \
+          --cluster_dns=${k8s_dns_service_ip} \
+          --cluster_domain=${cluster_domain_suffix} \
           --cni-conf-dir=/etc/kubernetes/cni/net.d \
           --exit-on-lock-contention \
-          --hostname-override={{.domain_name}} \
           --kubeconfig=/etc/kubernetes/kubeconfig \
           --lock-file=/var/run/lock/kubelet.lock \
           --network-plugin=cni \
@@ -73,45 +64,55 @@ systemd:
         RestartSec=5
         [Install]
         WantedBy=multi-user.target
-
+    - name: delete-node.service
+      enable: true
+      contents: |
+        [Unit]
+        Description=Waiting to delete Kubernetes node on shutdown
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStart=/bin/true
+        ExecStop=/etc/kubernetes/delete-node
+        [Install]
+        WantedBy=multi-user.target
 storage:
-  {{ if index . "pxe" }}
-  disks:
-    - device: /dev/sda
-      wipe_table: true
-      partitions:
-        - label: ROOT
-  filesystems:
-    - name: root
-      mount:
-        device: "/dev/sda1"
-        format: "ext4"
-        create:
-          force: true
-          options:
-            - "-LROOT"
-  {{end}}
   files:
+    - path: /etc/kubernetes/kubeconfig
+      filesystem: root
+      mode: 0644
+      contents:
+        inline: |
+          ${kubeconfig}
     - path: /etc/kubernetes/kubelet.env
       filesystem: root
       mode: 0644
       contents:
         inline: |
-          KUBELET_IMAGE_URL=docker://gcr.io/google_containers/hyperkube
-          KUBELET_IMAGE_TAG=v1.9.3
-    - path: /etc/hostname
-      filesystem: root
-      mode: 0644
-      contents:
-        inline:
-          {{.domain_name}}
+          KUBELET_IMAGE_URL=docker://k8s.gcr.io/hyperkube
+          KUBELET_IMAGE_TAG=v1.10.0
     - path: /etc/sysctl.d/max-user-watches.conf
       filesystem: root
       contents:
         inline: |
           fs.inotify.max_user_watches=16184
+    - path: /etc/kubernetes/delete-node
+      filesystem: root
+      mode: 0744
+      contents:
+        inline: |
+          #!/bin/bash
+          set -e
+          exec /usr/bin/rkt run \
+            --trust-keys-from-https \
+            --volume config,kind=host,source=/etc/kubernetes \
+            --mount volume=config,target=/etc/kubernetes \
+            --insecure-options=image \
+            docker://k8s.gcr.io/hyperkube:v1.10.0 \
+            --net=host \
+            --dns=host \
+            --exec=/kubectl -- --kubeconfig=/etc/kubernetes/kubeconfig delete node $(hostname)
 passwd:
   users:
     - name: core
-      ssh_authorized_keys:
-        - {{.ssh_authorized_key}}
+      ssh_authorized_keys: ${ssh_authorized_keys_list}
