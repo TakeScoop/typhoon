@@ -71,6 +71,12 @@ variable "worker_clc_snippets" {
   default     = []
 }
 
+variable "bastion_clc_snippets" {
+  type        = "list"
+  description = "Bastion Container Linux Config snippets"
+  default     = []
+}
+
 # configuration
 
 variable "ssh_authorized_key" {

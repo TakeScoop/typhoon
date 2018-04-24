@@ -62,6 +62,7 @@ data "template_file" "bastion_config" {
 data "ct_config" "bastion_ign" {
   content = "${data.template_file.bastion_config.rendered}"
   pretty_print = false
+  snippets     = ["${var.bastion_clc_snippets}"]
 }
 
 resource "aws_security_group" "bastion_external" {
