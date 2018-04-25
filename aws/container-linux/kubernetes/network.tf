@@ -71,18 +71,21 @@ resource "aws_subnet" "private" {
 
 resource "aws_route_table" "private" {
   vpc_id = "${aws_vpc.network.id}"
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = "${aws_nat_gateway.nat.id}"
-  }
-
-  route {
-    ipv6_cidr_block        =   "::/0"
-    egress_only_gateway_id = "${aws_egress_only_internet_gateway.egress_igw.id}"
-  }
-
   tags = "${map("Name", "${var.cluster_name}-private")}"
+}
+
+resource "aws_route" "nat_gateway" {
+  route_table_id = "${aws_route_table.private.id}"
+
+  destination_cidr_block     = "0.0.0.0/0"
+  nat_gateway_id = "${aws_nat_gateway.nat.id}"
+}
+
+resource "aws_route" "egress_only_gateway" {
+  route_table_id = "${aws_route_table.private.id}"
+
+  destination_ipv6_cidr_block        =   "::/0"
+  egress_only_gateway_id = "${aws_egress_only_internet_gateway.egress_igw.id}"
 }
 
 resource "aws_route_table_association" "private" {

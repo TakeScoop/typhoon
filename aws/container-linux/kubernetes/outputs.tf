@@ -36,6 +36,11 @@ output "bootstrap_controller_ip" {
   description = "IP address of the controller instance used to bootstrap the cluster"
 }
 
+output "private_route_table" {
+  value       = "${aws_route_table.private.id}"
+  description = "ID of the private route table that can be used to add additional private routes"
+}
+
 output "depends_id" {
   value       = "${null_resource.bootkube-start.id}"
   description = "Resource ID that will be defined when the cluster is ready"
