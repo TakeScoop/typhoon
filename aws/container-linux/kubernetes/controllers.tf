@@ -55,8 +55,7 @@ data "template_file" "controller_config" {
     etcd_name   = "etcd${count.index}"
     etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
 
-    # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
-    etcd_initial_cluster = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.repeat.*.triggers.domain))}"
+    etcd_initial_cluster = "${join(",", data.template_file.etcds.*.rendered)}"
 
     kubeconfig            = "${indent(10, module.bootkube.kubeconfig)}"
     ssh_authorized_key    = "${var.ssh_authorized_key}"
@@ -65,14 +64,15 @@ data "template_file" "controller_config" {
   }
 }
 
-# Horrible hack to generate a Terraform list of a desired length without dependencies.
-# Ideal ${repeat("etcd", 3) -> ["etcd", "etcd", "etcd"]}
-resource null_resource "repeat" {
-  count = "${var.controller_count}"
 
-  triggers {
-    name   = "etcd${count.index}"
-    domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
+data "template_file" "etcds" {
+  count    = "${var.controller_count}"
+  template = "etcd$${index}=https://$${cluster_name}-etcd$${index}.$${dns_zone}:2380"
+
+  vars {
+    index = "${count.index}"
+    cluster_name = "${var.cluster_name}"
+    dns_zone = "${var.dns_zone}"
   }
 }
 
