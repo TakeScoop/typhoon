@@ -93,3 +93,9 @@ variable "ami" {
   description = "Custom AMI to use for launching workers (defaults to latest stable CoreOS)"
   default = ""
 }
+
+variable "instance_role" {
+  type = "string"
+  description = "IAM role to assign to instances (defaults to none)"
+  default = ""
+}

@@ -10,6 +10,7 @@ module "workers" {
   instance_type   = "${var.worker_type}"
   os_channel      = "${var.os_channel}"
   disk_size       = "${var.disk_size}"
+  instance_role   = "${var.worker_role}"
 
   # configuration
   kubeconfig            = "${module.bootkube.kubeconfig}"

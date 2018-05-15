@@ -49,6 +49,9 @@ resource "aws_launch_configuration" "worker" {
   # network
   security_groups = ["${var.security_groups}"]
 
+  # iam
+  iam_instance_profile = "${var.instance_role != "" ? aws_iam_instance_profile.worker.name : ""}"
+
   lifecycle {
     // Override the default destroy and replace update behavior
     create_before_destroy = true
@@ -72,4 +75,11 @@ data "ct_config" "worker_ign" {
   content      = "${data.template_file.worker_config.rendered}"
   pretty_print = false
   snippets     = ["${var.clc_snippets}"]
+}
+
+resource "aws_iam_instance_profile" "worker" {
+  count = "${var.instance_role != "" ? 1 : 0}"
+
+  name = "${var.name}-worker"
+  role = "${var.instance_role}"
 }

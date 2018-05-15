@@ -161,3 +161,9 @@ variable "amis" {
   # assign an empty string value so terraform can detect the value type for the map
   default     = {"" = ""}
 }
+
+variable "worker_role" {
+  type = "string"
+  description = "IAM role to assign to worker nodes (defaults to none)"
+  default = ""
+}
