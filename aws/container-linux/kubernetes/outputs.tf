@@ -31,6 +31,11 @@ output "bastion_dns_name" {
   description = "DNS name of the network load balancer for distributing traffic to bastion hosts"
 }
 
+output "apiserver_dns_name" {
+  value       = "${aws_route53_record.apiserver.fqdn}"
+  description = "DNS name of the Route53 record used to access the Kubernetes apiserver"
+}
+
 output "bootstrap_controller_ip" {
   value       = "${aws_instance.controllers.0.private_ip}"
   description = "IP address of the controller instance used to bootstrap the cluster"
