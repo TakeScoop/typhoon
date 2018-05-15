@@ -50,7 +50,7 @@ resource "aws_launch_configuration" "worker" {
   security_groups = ["${var.security_groups}"]
 
   # iam
-  iam_instance_profile = "${var.instance_role != "" ? aws_iam_instance_profile.worker.name : ""}"
+  iam_instance_profile = "${var.instance_role != "" ? join("", aws_iam_instance_profile.worker.*.name) : ""}"
 
   lifecycle {
     // Override the default destroy and replace update behavior
