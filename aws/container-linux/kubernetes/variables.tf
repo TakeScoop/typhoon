@@ -79,11 +79,6 @@ variable "bastion_clc_snippets" {
 
 # configuration
 
-variable "ssh_authorized_key" {
-  type        = "string"
-  description = "SSH public key for user 'core'"
-}
-
 variable "asset_dir" {
   description = "Path to a directory where generated assets should be placed (contains secrets)"
   type        = "string"
@@ -166,4 +161,9 @@ variable "worker_role" {
   type = "string"
   description = "IAM role to assign to worker nodes (defaults to none)"
   default = ""
+}
+
+variable "ssh_user" {
+  type = "string"
+  description = "Username for provisioning via SSH"
 }

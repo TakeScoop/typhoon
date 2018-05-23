@@ -65,11 +65,6 @@ variable "kubeconfig" {
   description = "Must be set to `kubeconfig` output by cluster"
 }
 
-variable "ssh_authorized_key" {
-  type        = "string"
-  description = "SSH public key for user 'core'"
-}
-
 variable "service_cidr" {
   description = <<EOD
 CIDR IPv4 range to assign Kubernetes services.

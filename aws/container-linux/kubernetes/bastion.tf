@@ -53,10 +53,6 @@ resource "aws_launch_configuration" "bastion" {
 
 data "template_file" "bastion_config" {
   template = "${file("${path.module}/cl/bastion.yaml.tmpl")}"
-
-  vars = {
-    ssh_authorized_key = "${var.ssh_authorized_key}"
-  }
 }
 
 data "ct_config" "bastion_ign" {
