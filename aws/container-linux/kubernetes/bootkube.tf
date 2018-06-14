@@ -12,5 +12,9 @@ module "bootkube" {
   service_cidr          = "${var.service_cidr}"
   cluster_domain_suffix = "${var.cluster_domain_suffix}"
 
+  ca_certificate        = "${var.ca_cert}"
+  ca_key_alg            = "${var.ca_algorithm}"
+  ca_private_key        = "${var.ca_key}"
+
   apiserver_arguments   = "${var.apiserver_arguments}"
 }

@@ -167,3 +167,21 @@ variable "ssh_user" {
   type = "string"
   description = "Username for provisioning via SSH"
 }
+
+variable "ca_cert" {
+  description = "Existing PEM-encoded CA certificate (generated if blank)"
+  type        = "string"
+  default     = ""
+}
+
+variable "ca_algorithm" {
+  description = "Algorithm used to generate ca_key (required if ca_cert is specified)"
+  type        = "string"
+  default     = "RSA"
+}
+
+variable "ca_key" {
+  description = "Existing Certificate Authority private key (required if ca_certificate is set)"
+  type        = "string"
+  default     = ""
+}
