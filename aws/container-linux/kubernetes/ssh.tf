@@ -1,5 +1,9 @@
 # Secure copy etcd TLS assets to controllers.
 resource "null_resource" "copy-controller-secrets" {
+  depends_on = [
+    "aws_autoscaling_group.bastion"
+  ]
+
   count = "${var.controller_count}"
 
   connection {
