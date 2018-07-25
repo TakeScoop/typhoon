@@ -47,7 +47,6 @@ resource "aws_subnet" "public" {
   assign_ipv6_address_on_creation = true
 
   tags = "${merge(
-    var.subnet_tags,
     var.subnet_tags_public,
     map("Name", "${var.cluster_name}-public-${count.index}")
   )}"
@@ -71,7 +70,6 @@ resource "aws_subnet" "private" {
   assign_ipv6_address_on_creation = true
 
   tags = "${merge(
-    var.subnet_tags,
     var.subnet_tags_private,
     map("Name", "${var.cluster_name}-private-${count.index}")
   )}"

@@ -186,12 +186,6 @@ variable "ca_key" {
   default     = ""
 }
 
-variable "subnet_tags" {
-  type = "map"
-  description = "Tags to apply to all subnets"
-  default = {}
-}
-
 variable "subnet_tags_private" {
   type = "map"
   description = "Tags to apply to private subnets"
