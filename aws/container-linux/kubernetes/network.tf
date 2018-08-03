@@ -46,7 +46,10 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch         = true
   assign_ipv6_address_on_creation = true
 
-  tags = "${map("Name", "${var.cluster_name}-public-${count.index}")}"
+  tags = "${merge(
+    var.subnet_tags_public,
+    map("Name", "${var.cluster_name}-public-${count.index}")
+  )}"
 }
 
 resource "aws_route_table_association" "public" {
@@ -66,7 +69,10 @@ resource "aws_subnet" "private" {
   ipv6_cidr_block                 = "${cidrsubnet(aws_vpc.network.ipv6_cidr_block, 8, count.index + 8)}"
   assign_ipv6_address_on_creation = true
 
-  tags = "${map("Name", "${var.cluster_name}-private-${count.index}")}"
+  tags = "${merge(
+    var.subnet_tags_private,
+    map("Name", "${var.cluster_name}-private-${count.index}")
+  )}"
 }
 
 resource "aws_route_table" "private" {
