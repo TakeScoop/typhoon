@@ -26,11 +26,17 @@ resource "aws_autoscaling_group" "workers" {
     create_before_destroy = true
   }
 
-  tags = [{
+  tags {
     key                 = "Name"
     value               = "${var.name}-worker"
     propagate_at_launch = true
-  }]
+  }
+
+  tags {
+    key                 = "kubernetes.io/cluster/${var.cluster_name}"
+    value               = "owned"
+    propagate_at_launch = true
+  }
 }
 
 # Worker template
@@ -50,7 +56,7 @@ resource "aws_launch_configuration" "worker" {
   security_groups = ["${var.security_groups}"]
 
   # iam
-  iam_instance_profile = "${var.instance_role != "" ? join("", aws_iam_instance_profile.worker.*.name) : ""}"
+  iam_instance_profile = "${aws_iam_instance_profile.worker.name}"
 
   lifecycle {
     // Override the default destroy and replace update behavior
@@ -76,9 +82,36 @@ data "ct_config" "worker_ign" {
   snippets     = ["${var.clc_snippets}"]
 }
 
-resource "aws_iam_instance_profile" "worker" {
-  count = "${var.instance_role != "" ? 1 : 0}"
+resource "aws_iam_role_policy" "instance_read_ec2" {
+  name   = "instance-read-ec2"
+  role   = "${aws_iam_role.worker.id}"
+  policy = "${data.aws_iam_policy_document.read_ec2.json}"
+}
 
+data "aws_iam_policy_document" "read_ec2" {
+  statement {
+    actions   = ["ec2:Describe*"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "worker" {
+  name               = "${var.name}-worker"
+  assume_role_policy = "${data.aws_iam_policy_document.assume_role.json}"
+}
+
+resource "aws_iam_instance_profile" "worker" {
   name = "${var.name}-worker"
-  role = "${var.instance_role}"
+  role = "${aws_iam_role.worker.id}"
 }

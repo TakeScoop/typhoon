@@ -50,3 +50,13 @@ output "depends_id" {
   value       = "${null_resource.bootkube-start.id}"
   description = "Resource ID that will be defined when the cluster is ready"
 }
+
+output "controller_role" {
+  value       = "${aws_iam_role.controller.arn}"
+  description = "Instance role ARN attached to controller instances via instance profile"
+}
+
+output "worker_role" {
+  value       = "${module.workers.instance_role}"
+  description = "Instance role ARN attached to worker instances via instance profile"
+}

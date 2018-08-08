@@ -17,14 +17,16 @@ resource "aws_route53_record" "etcds" {
 resource "aws_instance" "controllers" {
   count = "${var.controller_count}"
 
-  tags = {
-    Name = "${var.cluster_name}-controller-${count.index}"
-  }
+  tags = "${map(
+    "Name", "${var.cluster_name}-controller-${count.index}",
+    "kubernetes.io/cluster/${var.cluster_name}", "owned"
+  )}"
 
   instance_type = "${var.controller_type}"
 
   ami       = "${lookup(var.amis, "controller", data.aws_ami.coreos.image_id)}"
   user_data = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
+  iam_instance_profile = "${aws_iam_instance_profile.controller.id}"
 
   # storage
   root_block_device {
@@ -80,4 +82,38 @@ data "ct_config" "controller_ign" {
   content      = "${element(data.template_file.controller_config.*.rendered, count.index)}"
   pretty_print = false
   snippets     = ["${var.controller_clc_snippets}"]
+}
+
+resource "aws_iam_role_policy" "instance_read_ec2" {
+  name   = "instance-read-ec2"
+  role   = "${aws_iam_role.controller.id}"
+  policy = "${data.aws_iam_policy_document.read_ec2.json}"
+}
+
+data "aws_iam_policy_document" "read_ec2" {
+  statement {
+    actions   = ["ec2:Describe*"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "controller" {
+  name               = "${var.cluster_name}-controller"
+  assume_role_policy = "${data.aws_iam_policy_document.assume_role.json}"
+}
+
+resource "aws_iam_instance_profile" "controller" {
+  name = "${var.cluster_name}-controller"
+  role = "${aws_iam_role.controller.id}"
 }

@@ -1,6 +1,8 @@
 module "workers" {
   source = "workers"
-  name   = "${var.cluster_name}"
+  
+  cluster_name = "${var.cluster_name}"
+  name         = "${var.cluster_name}"
 
   # AWS
   vpc_id          = "${aws_vpc.network.id}"
@@ -10,7 +12,6 @@ module "workers" {
   instance_type   = "${var.worker_type}"
   os_channel      = "${var.os_channel}"
   disk_size       = "${var.disk_size}"
-  instance_role   = "${var.worker_role}"
 
   # configuration
   kubeconfig            = "${module.bootkube.kubeconfig}"
