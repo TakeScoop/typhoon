@@ -162,6 +162,12 @@ variable "ssh_user" {
   description = "Username for provisioning via SSH"
 }
 
+
+variable "create_ca" {
+  description = "Toggles creation of a CA (when ca_certificate is omitted)"
+  default     = true
+}
+
 variable "ca_cert" {
   description = "Existing PEM-encoded CA certificate (generated if blank)"
   type        = "string"
