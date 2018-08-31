@@ -88,6 +88,13 @@ resource "aws_iam_role_policy" "instance_read_ec2" {
   policy = "${data.aws_iam_policy_document.read_ec2.json}"
 }
 
+resource "aws_iam_role_policy" "instance_assume_role" {
+  name   = "instance-assume-role"
+  role   = "${aws_iam_role.worker.id}"
+  policy = "${data.aws_iam_policy_document.assume_role.json}"
+}
+
+
 data "aws_iam_policy_document" "read_ec2" {
   statement {
     actions   = ["ec2:Describe*"]
@@ -96,6 +103,13 @@ data "aws_iam_policy_document" "read_ec2" {
 }
 
 data "aws_iam_policy_document" "assume_role" {
+  statement {
+    actions   = ["sts:AssumeRole"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "assume_role_from_ec2" {
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -108,7 +122,7 @@ data "aws_iam_policy_document" "assume_role" {
 
 resource "aws_iam_role" "worker" {
   name               = "${var.name}-worker"
-  assume_role_policy = "${data.aws_iam_policy_document.assume_role.json}"
+  assume_role_policy = "${data.aws_iam_policy_document.assume_role_from_ec2.json}"
 }
 
 resource "aws_iam_instance_profile" "worker" {
