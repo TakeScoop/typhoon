@@ -1,5 +1,21 @@
 # Typhoon [![IRC](https://img.shields.io/badge/freenode-%23typhoon-0099ef.svg)]() <img align="right" src="https://storage.googleapis.com/poseidon/typhoon-logo.png">
 
+## Fork
+
+**Maintainer:** [@bendrucker](https://github.com/bendrucker)
+
+Scoop maintains a fork of [Typhoon](https://github.com/poseidon/typhoon), as [recommended by its official docs](https://typhoon.psdn.io/advanced/customization/#architecture). The fork adds:
+
+* Private networking for all computing resources, accessible via a bastion host
+* Custom apiserver arguments (to enable OIDC authentication and other optional features)
+* Additional DNS aliases for apiserver
+* The [AWS cloud provider](https://github.com/kubernetes/cloud-provider-aws) to all nodes
+* Custom CA certificate support
+
+Additionally, it depends on a [fork of terraform-render-bootkube](https://github.com/takescoop/terraform-render-bootkube) which adds variables to support the above features.
+
+## Summary
+
 Typhoon is a minimal and free Kubernetes distribution.
 
 * Minimal, stable base Kubernetes distribution
