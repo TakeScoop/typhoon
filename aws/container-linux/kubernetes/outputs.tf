@@ -41,6 +41,11 @@ output "bootstrap_controller_ip" {
   description = "IP address of the controller instance used to bootstrap the cluster"
 }
 
+output nat_ips {
+  value       = ["${aws_eip.nat.public_ip}"]
+  description = "List of NAT IPs where public traffic from this cluster will originate"
+}
+
 output "private_route_table" {
   value       = "${aws_route_table.private.id}"
   description = "ID of the private route table that can be used to add additional private routes"
