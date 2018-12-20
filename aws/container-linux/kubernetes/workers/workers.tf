@@ -92,12 +92,6 @@ data "template_file" "worker-config" {
   }
 }
 
-data "ct_config" "worker_ign" {
-  content      = "${data.template_file.worker_config.rendered}"
-  pretty_print = false
-  snippets     = ["${var.clc_snippets}"]
-}
-
 resource "aws_iam_role_policy" "instance_read_ec2" {
   name   = "instance-read-ec2"
   role   = "${aws_iam_role.worker.id}"
