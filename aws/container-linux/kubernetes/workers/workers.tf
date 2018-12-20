@@ -26,6 +26,12 @@ resource "aws_autoscaling_group" "workers" {
     create_before_destroy = true
   }
 
+  # Waiting for instance creation delays adding the ASG to state. If instances
+  # can't be created (e.g. spot price too low), the ASG will be orphaned.
+  # Orphaned ASGs escape cleanup, can't be updated, and keep bidding if spot is
+  # used. Disable wait to avoid issues and align with other clouds.
+  wait_for_capacity_timeout = "0"
+
   tags {
     key                 = "Name"
     value               = "${var.name}-worker"
@@ -41,15 +47,18 @@ resource "aws_autoscaling_group" "workers" {
 
 # Worker template
 resource "aws_launch_configuration" "worker" {
-  image_id      = "${coalesce(var.ami, data.aws_ami.coreos.image_id)}"
-  instance_type = "${var.instance_type}"
+  image_id          = "${coalesce(var.ami, local.ami_id)}"
+  instance_type     = "${var.instance_type}"
+  spot_price        = "${var.spot_price}"
+  enable_monitoring = false
 
-  user_data = "${data.ct_config.worker_ign.rendered}"
+  user_data = "${data.ct_config.worker-ignition.rendered}"
 
   # storage
   root_block_device {
     volume_type = "${var.disk_type}"
     volume_size = "${var.disk_size}"
+    iops        = "${var.disk_iops}"
   }
 
   # network
@@ -65,8 +74,15 @@ resource "aws_launch_configuration" "worker" {
   }
 }
 
-# Worker Container Linux Config
-data "template_file" "worker_config" {
+# Worker Ignition config
+data "ct_config" "worker-ignition" {
+  content      = "${data.template_file.worker-config.rendered}"
+  pretty_print = false
+  snippets     = ["${var.clc_snippets}"]
+}
+
+# Worker Container Linux config
+data "template_file" "worker-config" {
   template = "${file("${path.module}/cl/worker.yaml.tmpl")}"
 
   vars = {

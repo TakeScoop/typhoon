@@ -18,19 +18,25 @@ spec:
       labels:
         name: grafana
         phase: prod
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
     spec:
       containers:
         - name: grafana
-          image: grafana/grafana:5.0.4
+          image: grafana/grafana:5.4.2
           env:
             - name: GF_SERVER_HTTP_PORT
               value: "8080"
             - name: GF_AUTH_BASIC_ENABLED
               value: "false"
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
               value: Viewer
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
           ports:
             - name: http
               containerPort: 8080

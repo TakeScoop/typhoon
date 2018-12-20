@@ -44,12 +44,18 @@ resource "digitalocean_droplet" "controllers" {
   ipv6               = true
   private_networking = true
 
-  user_data = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
+  user_data = "${element(data.ct_config.controller-ignitions.*.rendered, count.index)}"
   ssh_keys  = ["${var.ssh_fingerprints}"]
 
   tags = [
     "${digitalocean_tag.controllers.id}",
   ]
+
+  lifecycle {
+    ignore_changes = [
+      "user_data",
+    ]
+  }
 }
 
 # Tag to label controllers
@@ -57,8 +63,16 @@ resource "digitalocean_tag" "controllers" {
   name = "${var.cluster_name}-controller"
 }
 
-# Controller Container Linux Config
-data "template_file" "controller_config" {
+# Controller Ignition configs
+data "ct_config" "controller-ignitions" {
+  count        = "${var.controller_count}"
+  content      = "${element(data.template_file.controller-configs.*.rendered, count.index)}"
+  pretty_print = false
+  snippets     = ["${var.controller_clc_snippets}"]
+}
+
+# Controller Container Linux configs
+data "template_file" "controller-configs" {
   count = "${var.controller_count}"
 
   template = "${file("${path.module}/cl/controller.yaml.tmpl")}"
@@ -69,27 +83,19 @@ data "template_file" "controller_config" {
     etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
 
     # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
-    etcd_initial_cluster  = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.repeat.*.triggers.domain))}"
+    etcd_initial_cluster  = "${join(",", data.template_file.etcds.*.rendered)}"
     k8s_dns_service_ip    = "${cidrhost(var.service_cidr, 10)}"
     cluster_domain_suffix = "${var.cluster_domain_suffix}"
   }
 }
 
-# Horrible hack to generate a Terraform list of a desired length without dependencies.
-# Ideal ${repeat("etcd", 3) -> ["etcd", "etcd", "etcd"]}
-resource null_resource "repeat" {
-  count = "${var.controller_count}"
+data "template_file" "etcds" {
+  count    = "${var.controller_count}"
+  template = "etcd$${index}=https://$${cluster_name}-etcd$${index}.$${dns_zone}:2380"
 
-  triggers {
-    name   = "etcd${count.index}"
-    domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
+  vars {
+    index        = "${count.index}"
+    cluster_name = "${var.cluster_name}"
+    dns_zone     = "${var.dns_zone}"
   }
-}
-
-data "ct_config" "controller_ign" {
-  count        = "${var.controller_count}"
-  content      = "${element(data.template_file.controller_config.*.rendered, count.index)}"
-  pretty_print = false
-
-  snippets = ["${var.controller_clc_snippets}"]
 }

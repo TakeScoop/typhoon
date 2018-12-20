@@ -39,10 +39,10 @@ variable "instance_type" {
   description = "EC2 instance type"
 }
 
-variable "os_channel" {
+variable "os_image" {
   type        = "string"
-  default     = "stable"
-  description = "Container Linux AMI channel (stable, beta, alpha)"
+  default     = "coreos-stable"
+  description = "AMI channel for a Container Linux derivative (coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha)"
 }
 
 variable "disk_size" {
@@ -55,6 +55,18 @@ variable "disk_type" {
   type        = "string"
   default     = "gp2"
   description = "Type of the EBS volume (e.g. standard, gp2, io1)"
+}
+
+variable "disk_iops" {
+  type        = "string"
+  default     = "0"
+  description = "IOPS of the EBS volume (required for io1)"
+}
+
+variable "spot_price" {
+  type        = "string"
+  default     = ""
+  description = "Spot price in USD for autoscaling group spot instances. Leave as default empty string for autoscaling group to use on-demand instances. Note, switching in-place from spot to on-demand is not possible: https://github.com/terraform-providers/terraform-provider-aws/issues/4320"
 }
 
 variable "clc_snippets" {
@@ -73,7 +85,7 @@ variable "kubeconfig" {
 variable "service_cidr" {
   description = <<EOD
 CIDR IPv4 range to assign Kubernetes services.
-The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for kube-dns.
+The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for coredns.
 EOD
 
   type    = "string"
@@ -81,7 +93,7 @@ EOD
 }
 
 variable "cluster_domain_suffix" {
-  description = "Queries for domains with the suffix will be answered by kube-dns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
+  description = "Queries for domains with the suffix will be answered by coredns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
   type        = "string"
   default     = "cluster.local"
 }

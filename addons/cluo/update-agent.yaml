@@ -15,10 +15,12 @@ spec:
     metadata:
       labels:
         app: container-linux-update-agent
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
     spec:
       containers:
       - name: update-agent
-        image: quay.io/coreos/container-linux-update-operator:v0.6.0
+        image: quay.io/coreos/container-linux-update-operator:v0.7.0
         command:
         - "/bin/update-agent"
         volumeMounts:

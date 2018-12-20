@@ -1,6 +1,6 @@
 # Hardware
 
-While bare-metal Kubernetes clusters have no special hardware requirements (beyond the [min reqs](/bare-metal.md#requirements)), Typhoon does ensure certain router and server hardware integrates well with Kubernetes.
+Typhoon ensures certain networking hardware integrates well with bare-metal Kubernetes.
 
 ## Ubiquiti
 
@@ -85,7 +85,7 @@ Restart `dnsmasq`.
 sudo /etc/init.d/dnsmasq restart
 ```
 
-Configure queries for `*.svc.cluster.local` to be forwarded to a Kubernetes `kube-dns` service IP to allow hosts to resolve cluster-local Kubernetes names.
+Configure queries for `*.svc.cluster.local` to be forwarded to the Kubernetes `coredns` service IP to allow hosts to resolve cluster-local Kubernetes names.
 
 ```
 configure
@@ -108,7 +108,7 @@ commit-confirm
 
 ### Port Forwarding
 
-Expose the [Ingress Controller](/addons/ingress.md#bare-metal) by adding `port-forward` rules that DNAT a port on the router's WAN interface to an internal IP and port. By convention, a public Ingress controller is assigned a fixed service IP like kube-dns (e.g. 10.3.0.12).
+Expose the [Ingress Controller](/addons/ingress.md#bare-metal) by adding `port-forward` rules that DNAT a port on the router's WAN interface to an internal IP and port. By convention, a public Ingress controller is assigned a fixed service IP (e.g. 10.3.0.12).
 
 ```
 configure
@@ -162,14 +162,14 @@ show ip bgp neighbors
 show ip route bgp
 ```
 
-Be sure to register the peer by creating a Calico `bgpPeer` CRD with `kubectl apply`.
+Be sure to register the peer by creating a Calico `BGPPeer` CRD with `kubectl apply`.
 
 ```
-apiVersion: v1
-kind: bgpPeer
+apiVersion: crd.projectcalico.org/v1
+kind: BGPPeer
 metadata:
-  peerIP: LAN_IP
-  scope: global
+  name: NAME
 spec:
+  peerIP: LAN_IP
   asNumber: 64512
 ```
