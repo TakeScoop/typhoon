@@ -57,8 +57,8 @@ resource "aws_security_group_rule" "controller-apiserver" {
 
   type        = "ingress"
   protocol    = "tcp"
-  from_port   = 6443
-  to_port     = 6443
+  from_port   = "${var.apiserver_port}"
+  to_port     = "${var.apiserver_port}"
   cidr_blocks = ["0.0.0.0/0"]
 }
 

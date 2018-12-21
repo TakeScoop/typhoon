@@ -144,6 +144,12 @@ variable "enable_reporting" {
 
 # Scoop variables
 
+variable "apiserver_port" {
+  type        = "string"
+  description = "Port where the apiserver will listen"
+  default     = "443"
+}
+
 variable "apiserver_aliases" {
   type = "list"
   description = "List of alternate DNS names that can be used to address the Kubernetes API"
