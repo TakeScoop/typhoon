@@ -16,8 +16,13 @@ module "bootkube" {
   ca_certificate        = "${var.ca_cert}"
   ca_key_alg            = "${var.ca_algorithm}"
   ca_private_key        = "${var.ca_key}"
-
-  apiserver_arguments   = "${var.apiserver_arguments}"
   
   enable_reporting      = "${var.enable_reporting}"
+
+  # scoop
+
+  # overrides default (6443) for backward compatibility
+  apiserver_port        = 443
+  apiserver_arguments   = "${var.apiserver_arguments}"
+
 }
