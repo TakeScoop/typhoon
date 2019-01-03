@@ -21,8 +21,7 @@ module "bootkube" {
 
   # scoop
 
-  # overrides default (6443) for backward compatibility
-  apiserver_port        = 443
+  apiserver_port        = "${var.apiserver_port}"
   apiserver_arguments   = "${var.apiserver_arguments}"
 
 }
