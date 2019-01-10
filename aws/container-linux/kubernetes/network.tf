@@ -1,5 +1,5 @@
 locals {
-  az_count = "${local.az_count}"
+  az_count = "${length(data.aws_availability_zones.all.names)}"
 }
 
 data "aws_availability_zones" "all" {}
