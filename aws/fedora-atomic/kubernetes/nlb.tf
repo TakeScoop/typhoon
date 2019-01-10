@@ -88,11 +88,6 @@ resource "aws_lb_target_group_attachment" "controllers" {
   count = "${var.controller_count}"
 
   target_group_arn = "${aws_lb_target_group.controllers.arn}"
-<<<<<<< HEAD:aws/container-linux/kubernetes/apiserver.tf
-  target_id        = "${element(aws_instance.controllers.*.private_ip, count.index)}"
-  port             = 443
-=======
   target_id        = "${element(aws_instance.controllers.*.id, count.index)}"
   port             = 6443
->>>>>>> poseidon/master:aws/fedora-atomic/kubernetes/nlb.tf
 }
