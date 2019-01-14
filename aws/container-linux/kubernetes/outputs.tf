@@ -1,5 +1,11 @@
+output "kubeconfig-admin" {
+  value = "${module.bootkube.kubeconfig-admin}"
+}
+
+# Outputs for Kubernetes Ingress
+
 output "ingress_dns_name" {
-  value       = "${module.workers.ingress_dns_name}"
+  value       = "${aws_lb.nlb.dns_name}"
   description = "DNS name of the network load balancer for distributing traffic to Ingress controllers"
 }
 
@@ -21,7 +27,19 @@ output "worker_security_groups" {
 }
 
 output "kubeconfig" {
-  value = "${module.bootkube.kubeconfig}"
+  value = "${module.bootkube.kubeconfig-kubelet}"
+}
+
+# Outputs for custom load balancing
+
+output "worker_target_group_http" {
+  description = "ARN of a target group of workers for HTTP traffic"
+  value       = "${module.workers.target_group_http}"
+}
+
+output "worker_target_group_https" {
+  description = "ARN of a target group of workers for HTTPS traffic"
+  value       = "${module.workers.target_group_https}"
 }
 
 # Scoop outputs
@@ -42,12 +60,12 @@ output "bootstrap_controller_ip" {
 }
 
 output nat_ips {
-  value       = ["${aws_eip.nat.public_ip}"]
+  value       = ["${aws_eip.nat.*.public_ip}"]
   description = "List of NAT IPs where public traffic from this cluster will originate"
 }
 
-output "private_route_table" {
-  value       = "${aws_route_table.private.id}"
+output "private_route_tables" {
+  value       = ["${aws_route_table.private.*.id}"]
   description = "ID of the private route table that can be used to add additional private routes"
 }
 

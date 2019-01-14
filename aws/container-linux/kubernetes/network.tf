@@ -1,3 +1,7 @@
+locals {
+  az_count = "${length(data.aws_availability_zones.all.names)}"
+}
+
 data "aws_availability_zones" "all" {}
 
 # Network VPC, gateway, and routes
@@ -36,7 +40,7 @@ resource "aws_route_table" "public" {
 # Subnets (one per availability zone)
 
 resource "aws_subnet" "public" {
-  count = "${length(data.aws_availability_zones.all.names)}"
+  count = "${local.az_count}"
 
   vpc_id            = "${aws_vpc.network.id}"
   availability_zone = "${data.aws_availability_zones.all.names[count.index]}"
@@ -53,14 +57,14 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = "${length(data.aws_availability_zones.all.names)}"
+  count = "${local.az_count}"
 
   route_table_id = "${aws_route_table.public.id}"
   subnet_id      = "${element(aws_subnet.public.*.id, count.index)}"
 }
 
 resource "aws_subnet" "private" {
-  count = "${length(data.aws_availability_zones.all.names)}"
+  count = "${local.az_count}"
 
   vpc_id            = "${aws_vpc.network.id}"
   availability_zone = "${data.aws_availability_zones.all.names[count.index]}"
@@ -76,33 +80,41 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_route_table" "private" {
+  count = "${local.az_count}"
+
   vpc_id = "${aws_vpc.network.id}"
   tags = "${map("Name", "${var.cluster_name}-private")}"
 }
 
 resource "aws_route" "nat_gateway" {
-  route_table_id = "${aws_route_table.private.id}"
+  count = "${local.az_count}"
+
+  route_table_id = "${element(aws_route_table.private.*.id, count.index)}"
 
   destination_cidr_block     = "0.0.0.0/0"
-  nat_gateway_id = "${aws_nat_gateway.nat.id}"
+  nat_gateway_id = "${element(aws_nat_gateway.nat.*.id, count.index)}"
 }
 
 resource "aws_route" "egress_only_gateway" {
-  route_table_id = "${aws_route_table.private.id}"
+  count = "${local.az_count}"
+
+  route_table_id = "${element(aws_route_table.private.*.id, count.index)}"
 
   destination_ipv6_cidr_block        =   "::/0"
   egress_only_gateway_id = "${aws_egress_only_internet_gateway.egress_igw.id}"
 }
 
 resource "aws_route_table_association" "private" {
-  count = "${length(data.aws_availability_zones.all.names)}"
+  count = "${local.az_count}"
 
-  route_table_id = "${aws_route_table.private.id}"
+  route_table_id = "${element(aws_route_table.private.*.id, count.index)}"
   subnet_id      = "${element(aws_subnet.private.*.id, count.index)}"
 }
 
 
 resource "aws_eip" "nat" {
+  count = "${local.az_count}"
+
   vpc = true
 }
 
@@ -111,8 +123,10 @@ resource "aws_nat_gateway" "nat" {
     "aws_internet_gateway.gateway",
   ]
 
-  allocation_id = "${aws_eip.nat.id}"
-  subnet_id = "${element(aws_subnet.public.*.id, 0)}"
+  count = "${local.az_count}"
+
+  allocation_id = "${element(aws_eip.nat.*.id, count.index)}"
+  subnet_id = "${element(aws_subnet.public.*.id, count.index)}"
 }
 
 resource "aws_egress_only_internet_gateway" "egress_igw" {

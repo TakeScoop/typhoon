@@ -18,7 +18,7 @@ module "google-cloud-yavin" {
 }
 
 module "bare-metal-mercury" {
-  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.10.0"
+  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.13.1"
   ...
 }
 ```
@@ -40,7 +40,7 @@ Blue-green replacement reduces risk for clusters running critical applications. 
 Blue-green replacement provides some subtler benefits as well:
 
 * Encourages investment in tooling for traffic migration and failovers. When a cluster incident arises, shifting applications to a healthy cluster will be second nature.
-* Discourages reliance on in-place opqaue state. Retain confidence in your ability to create infrastructure from scratch.
+* Discourages reliance on in-place opaque state. Retain confidence in your ability to create infrastructure from scratch.
 * Allows Typhoon to make architecture changes between releases and eases the burden on Typhoon maintainers. By contrast, distros promising in-place upgrades get stuck with their mistakes or require complex and error-prone migrations.
 
 ### Bare-Metal
@@ -78,7 +78,7 @@ $ terraform apply
 Apply complete! Resources: 0 added, 0 changed, 55 destroyed.
 ```
 
-Re-provision a new cluster by following the bare-metal [tutorial](../bare-metal.md#cluster).
+Re-provision a new cluster by following the bare-metal [tutorial](../cl/bare-metal.md#cluster).
 
 ### Cloud
 
@@ -110,9 +110,9 @@ Apply complete! Resources: 0 added, 0 changed, 55 destroyed.
 
 #### In-place Edits
 
-Typhoon uses a self-hosted Kubernetes control plane which allows certain manifest upgrades to be performed in-place. Components like `apiserver`, `controller-manager`, `scheduler`, `flannel`/`calico`, `kube-dns`, and `kube-proxy` are run on Kubernetes itself and can be edited via `kubectl`. If you're interested, see the bootkube [upgrade docs](https://github.com/kubernetes-incubator/bootkube/blob/master/Documentation/upgrading.md).
+Typhoon uses a self-hosted Kubernetes control plane which allows certain manifest upgrades to be performed in-place. Components like `apiserver`, `controller-manager`, `scheduler`, `flannel`/`calico`, `coredns`, and `kube-proxy` are run on Kubernetes itself and can be edited via `kubectl`. If you're interested, see the bootkube [upgrade docs](https://github.com/kubernetes-incubator/bootkube/blob/master/Documentation/upgrading.md).
 
-In certain scenarios, in-place edits can be useful for quickly rolling out security patches (e.g. bumping `kube-dns`) or prioritizing speed over the safety of a proper cluster re-provision and transition.
+In certain scenarios, in-place edits can be useful for quickly rolling out security patches (e.g. bumping `coredns`) or prioritizing speed over the safety of a proper cluster re-provision and transition.
 
 !!! note
     Rarely, we may test certain security in-place edits and mention them as an option in release notes.
@@ -127,112 +127,146 @@ Typhoon supports multi-controller clusters, so it is possible to upgrade a clust
 !!! warning
     Typhoon does not support or document node replacement as an upgrade strategy. It limits Typhoon's ability to make infrastructure and architectural changes between tagged releases. 
 
-## Terraform v0.11.x
+### Terraform Plugins Directory
 
-Terraform v0.10.x to v0.11.x introduced breaking changes in the provider and module inheritance relationship that you MUST be aware of when upgrading to the v0.11.x `terraform` binary. Terraform now allows multiple named (i.e. aliased) copies of a provider to exist (e.g `aws.default`, `aws.somename`). Terraform now also requires providers be explicitly passed to modules in order to satisfy module version contraints (which Typhoon modules define). Full details can be found in [typhoon#77](https://github.com/poseidon/typhoon/issues/77) and [hashicorp#16824](https://github.com/hashicorp/terraform/issues/16824).
-
-In particular, after upgrading to the v0.11.x `terraform` binary, you'll notice:
-
-* `terraform plan` does not succeed and prompts for variables when it didn't before
-* `terraform plan` does not succeed and mentions "provider configuration block is required for all operations"
-* `terraform apply` fails when you comment or remove a module usage in order to delete a cluster
-
-### New users
-
-New users can start with Terraform v0.11.x and follow the Typhoon docs without issue.
-
-### Existing
-
-Users who used modules to create clusters with Terraform v0.10.x and still manage those clusters via Terraform must explicitly add each provider used in `provider.tf`:
+Use the Terraform 3rd-party [plugin directory](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins) `~/.terraform.d/plugins` to keep versioned copies of the `terraform-provider-ct` and `terraform-provider-matchbox` plugins. The plugin directory replaces the `~/.terraformrc` file to allow 3rd party plugins to be defined and versioned independently (rather than globally).
 
 ```
-provider "local" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "null" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "template" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "tls" {
-  version = "~> 1.0"
-  alias = "default"
-}
-```
-
-Modify the `google`, `aws`, or `digitalocean` provider section to specify an explicit `alias` name.
-
-```
-provider "digitalocean" {
-  version = "0.1.2"
-  token = "${chomp(file("~/.config/digital-ocean/token"))}"
-  alias = "default"
-}
-```
-
-!!! note
-    In these examples, we've chosen to name each provider "default", though the point of the Terraform changes is that other possibilities are possible.
-
-Edit each instance (i.e. usage) of a module and explicitly pass the providers.
-
-```
-module "aws-cluster" {
-  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes"
-  
-  providers = {
-    aws = "aws.default"
-    local = "local.default"
-    null = "null.default"
-    template = "template.default"
-    tls = "tls.default"
-  }
-
-  cluster_name = "somename"
-```
-
-Re-run `terraform plan`. Plan will claim there are no changes to apply. Run `terraform apply` anyway as this will update Terraform state to be aware of the explicit provider versions.
-
-### Verify
-
-You should now be able to run `terraform plan` without errors. When you choose, you may comment or delete a module from Terraform configs and `terraform apply` should destroy the cluster correctly.
-
-## terraform-provider-ct v0.2.1
-
-Typhoon requires updating the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin installed on your system from v0.2.0 to [v0.2.1](https://github.com/coreos/terraform-provider-ct/releases/tag/v0.2.1).
-
-Check your `~/.terraformrc` to find your current `terraform-provider-ct` plugin.
-
-```
+# ~/.terraformrc (DEPRECATED)
 providers {
   ct = "/usr/local/bin/terraform-provider-ct"
+  matchbox = "/usr/local/bin/terraform-provider-matchbox"
 }
 ```
 
-Make a backup copy. Install `terraform-provider-ct` v0.2.1.
+Migrate to using the Terraform plugin directory. Move `~/.terraformrc` to a backup location.
+
+```
+mv ~/.terraformrc ~/.terraform-backup
+```
+
+Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`. Download the **same version** of `terraform-provider-ct` you were using with `~/.terraformrc`, updating only be done as a followup and is **only** safe for v1.12.2+ clusters!
 
 ```sh
 wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.2.1/terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
 tar xzf terraform-provider-ct-v0.2.1-linux-amd64.tar.gz
-sudo mv terraform-provider-ct-v0.2.1-linux-amd64/terraform-provider-ct /usr/local/bin/
+mv terraform-provider-ct-v0.2.1-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.2.1
 ```
 
-Re-initialize Terraform configs which have Typhoon cluster resources.
+If you use bare-metal, add the [terraform-provider-matchbox](https://github.com/coreos/terraform-provider-matchbox) plugin binary for your system to `~/.terraform.d/plugins/`, noting the versioned name.
+
+```sh
+wget https://github.com/coreos/terraform-provider-matchbox/releases/download/v0.2.2/terraform-provider-matchbox-v0.2.2-linux-amd64.tar.gz
+tar xzf terraform-provider-matchbox-v0.2.2-linux-amd64.tar.gz
+mv terraform-provider-matchbox-v0.2.2-linux-amd64/terraform-provider-matchbox ~/.terraform.d/plugins/terraform-provider-matchbox_v0.2.2
+```
+
+Binary names are versioned. This enables the ability to upgrade different plugins and have clusters pin different versions.
 
 ```
-cd clusters
+$ tree ~/.terraform.d/
+/home/user/.terraform.d/
+└── plugins
+    ├── terraform-provider-ct_v0.2.1
+    └── terraform-provider-matchbox_v0.2.2
+```
+
+In each Terraform working directory, set the version of each provider.
+
+```
+# providers.tf
+
+provider "matchbox" {
+  version = "0.2.2"
+  ...
+}
+
+provider "ct" {
+  version = "0.2.1"
+}
+```
+
+Run `terraform init` to ensure plugin version requirements are met. Verify `terraform plan` does not produce a diff, since the plugin versions should be the same as previously.
+
+```
+$ terraform init
+$ terraform plan
+```
+
+### Upgrade terraform-provider-ct
+
+The [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin parses, validates, and converts Container Linux Configs into Ignition user-data for provisioning instances. Previously, updating the plugin re-provisioned controller nodes and was destructive to clusters. With Typhoon v1.12.2+, the plugin can be updated in-place and on apply, only workers will be replaced.
+
+First, [migrate](#terraform-plugins-directory) to the Terraform 3rd-party plugin directory to allow 3rd-party plugins to be defined and versioned independently (rather than globally).
+
+Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
+
+```sh
+wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.3.0/terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
+mv terraform-provider-ct-v0.3.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.3.0
+```
+
+Binary names are versioned. This enables the ability to upgrade different plugins and have clusters pin different versions.
+
+```
+$ tree ~/.terraform.d/
+/home/user/.terraform.d/
+└── plugins
+    ├── terraform-provider-ct_v0.2.1
+    ├── terraform-provider-ct_v0.3.0
+    └── terraform-provider-matchbox_v0.2.2
+```
+
+
+Update the version of the `ct` plugin in each Terraform working directory. Typhoon clusters managed in the working directory **must** be v1.12.2 or higher.
+
+```
+# providers.tf
+provider "ct" {
+  version = "0.3.0"
+}
+```
+
+Run init and plan to check that no diff is proposed for the controller nodes (a diff would destroy cluster state).
+
+```
 terraform init
-```
-
-Verify Terraform does not produce a diff related to Container Linux provisioning.
-
-```
 terraform plan
 ```
+
+Apply the change. Worker nodes' user-data will be changed and workers will be replaced. Rollout happens slightly differently on each platform:
+
+
+#### AWS
+
+AWS creates a new worker ASG, then removes the old ASG. New workers join the cluster and old workers disappear. `terraform apply` will hang during this process.
+
+#### Azure
+
+Azure edits the worker scale set in-place instantly. Manually terminate workers to create replacement workers using the new user-data.
+
+#### Bare-Metal
+
+No action is needed. Bare-Metal machines do not re-PXE unless explicitly made to do so.
+
+#### DigitalOcean
+
+DigitalOcean destroys existing worker nodes and DNS records, then creates new workers and DNS records. DigitalOcean lacks a "managed group" notion. For worker droplets to join the cluster, you **must** taint the secret copying step to indicate it must be repeated to add the kubeconfig to new workers.
+
+```
+# old workers destroyed, new workers created
+terraform apply
+
+# add kubeconfig to new workers
+terraform state list | grep null_resource
+terraform taint -module digital-ocean-nemo null_resource.copy-worker-secrets.N
+terraform apply
+```
+
+Expect downtime.
+
+#### Google Cloud
+
+Google Cloud creates a new worker template and edits the worker instance group instantly. Manually terminate workers and replacement workers will use the user-data.
 

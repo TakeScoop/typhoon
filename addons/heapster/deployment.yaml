@@ -14,14 +14,16 @@ spec:
       labels:
         name: heapster
         phase: prod
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
     spec:
       serviceAccountName: heapster
       containers:
         - name: heapster
-          image: k8s.gcr.io/heapster-amd64:v1.5.2
+          image: k8s.gcr.io/heapster-amd64:v1.5.4
           command:
             - /heapster
-            - --source=kubernetes.summary_api:''
+            - --source=kubernetes.summary_api:''?useServiceAccount=true&kubeletHttps=true&kubeletPort=10250&insecure=true
           livenessProbe:
             httpGet:
               path: /healthz

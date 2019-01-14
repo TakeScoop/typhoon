@@ -10,41 +10,53 @@ variable "matchbox_http_endpoint" {
   description = "Matchbox HTTP read-only endpoint (e.g. http://matchbox.example.com:8080)"
 }
 
-variable "container_linux_channel" {
+variable "os_channel" {
   type        = "string"
-  description = "Container Linux channel corresponding to the container_linux_version"
+  description = "Channel for a Container Linux derivative (coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha)"
 }
 
-variable "container_linux_version" {
+variable "os_version" {
   type        = "string"
-  description = "Container Linux version of the kernel/initrd to PXE or the image to install"
+  description = "Version for a Container Linux derivative to PXE and install (coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha)"
 }
 
 # machines
 # Terraform's crude "type system" does not properly support lists of maps so we do this.
 
 variable "controller_names" {
-  type = "list"
+  type        = "list"
+  description = "Ordered list of controller names (e.g. [node1])"
 }
 
 variable "controller_macs" {
-  type = "list"
+  type        = "list"
+  description = "Ordered list of controller identifying MAC addresses (e.g. [52:54:00:a1:9c:ae])"
 }
 
 variable "controller_domains" {
-  type = "list"
+  type        = "list"
+  description = "Ordered list of controller FQDNs (e.g. [node1.example.com])"
 }
 
 variable "worker_names" {
-  type = "list"
+  type        = "list"
+  description = "Ordered list of worker names (e.g. [node2, node3])"
 }
 
 variable "worker_macs" {
-  type = "list"
+  type        = "list"
+  description = "Ordered list of worker identifying MAC addresses (e.g. [52:54:00:b2:2f:86, 52:54:00:c3:61:77])"
 }
 
 variable "worker_domains" {
-  type = "list"
+  type        = "list"
+  description = "Ordered list of worker FQDNs (e.g. [node2.example.com, node3.example.com])"
+}
+
+variable "clc_snippets" {
+  type        = "map"
+  description = "Map from machine names to lists of Container Linux Config snippets"
+  default     = {}
 }
 
 # configuration
@@ -76,6 +88,12 @@ variable "network_mtu" {
   default     = "1480"
 }
 
+variable "network_ip_autodetection_method" {
+  description = "Method to autodetect the host IPv4 address (applies to calico only)"
+  type        = "string"
+  default     = "first-found"
+}
+
 variable "pod_cidr" {
   description = "CIDR IPv4 range to assign Kubernetes pods"
   type        = "string"
@@ -85,7 +103,7 @@ variable "pod_cidr" {
 variable "service_cidr" {
   description = <<EOD
 CIDR IPv4 range to assign Kubernetes services.
-The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for kube-dns.
+The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for coredns.
 EOD
 
   type    = "string"
@@ -95,7 +113,7 @@ EOD
 # optional
 
 variable "cluster_domain_suffix" {
-  description = "Queries for domains with the suffix will be answered by kube-dns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
+  description = "Queries for domains with the suffix will be answered by coredns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
   type        = "string"
   default     = "cluster.local"
 }
@@ -103,7 +121,7 @@ variable "cluster_domain_suffix" {
 variable "cached_install" {
   type        = "string"
   default     = "false"
-  description = "Whether Container Linux should PXE boot and install from matchbox /assets cache. Note that the admin must have downloaded the container_linux_version into matchbox assets."
+  description = "Whether Container Linux should PXE boot and install from matchbox /assets cache. Note that the admin must have downloaded the os_version into matchbox assets."
 }
 
 variable "install_disk" {
@@ -115,7 +133,7 @@ variable "install_disk" {
 variable "container_linux_oem" {
   type        = "string"
   default     = ""
-  description = "Specify an OEM image id to use as base for the installation (e.g. ami, vmware_raw, xen) or leave blank for the default image"
+  description = "DEPRECATED: Specify an OEM image id to use as base for the installation (e.g. ami, vmware_raw, xen) or leave blank for the default image"
 }
 
 variable "kernel_args" {
@@ -124,16 +142,8 @@ variable "kernel_args" {
   default     = []
 }
 
-# unofficial, undocumented, unsupported, temporary
-
-variable "controller_networkds" {
-  type        = "list"
-  description = "Controller Container Linux config networkd section"
-  default     = []
-}
-
-variable "worker_networkds" {
-  type        = "list"
-  description = "Worker Container Linux config networkd section"
-  default     = []
+variable "enable_reporting" {
+  type        = "string"
+  description = "Enable usage or analytics reporting to upstreams (Calico)"
+  default     = "false"
 }

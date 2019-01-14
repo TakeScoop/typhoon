@@ -1,5 +1,4 @@
-# Regional managed instance group maintains a homogeneous set of workers that
-# span the zones in the region.
+# Regional managed instance group of workers
 resource "google_compute_region_instance_group_manager" "workers" {
   name        = "${var.name}-worker-group"
   description = "Compute instance group of ${var.name} workers"
@@ -11,37 +10,25 @@ resource "google_compute_region_instance_group_manager" "workers" {
 
   target_size = "${var.count}"
 
-  # target pool to which instances in the group should be added
-  target_pools = [
-    "${google_compute_target_pool.workers.self_link}",
-  ]
-}
+  named_port {
+    name = "http"
+    port = "80"
+  }
 
-# Worker Container Linux Config
-data "template_file" "worker_config" {
-  template = "${file("${path.module}/cl/worker.yaml.tmpl")}"
-
-  vars = {
-    kubeconfig            = "${indent(10, var.kubeconfig)}"
-    ssh_authorized_key    = "${var.ssh_authorized_key}"
-    k8s_dns_service_ip    = "${cidrhost(var.service_cidr, 10)}"
-    cluster_domain_suffix = "${var.cluster_domain_suffix}"
+  named_port {
+    name = "https"
+    port = "443"
   }
 }
 
-data "ct_config" "worker_ign" {
-  content      = "${data.template_file.worker_config.rendered}"
-  pretty_print = false
-  snippets     = ["${var.clc_snippets}"]
-}
-
+# Worker instance template
 resource "google_compute_instance_template" "worker" {
   name_prefix  = "${var.name}-worker-"
   description  = "Worker Instance template"
   machine_type = "${var.machine_type}"
 
   metadata {
-    user-data = "${data.ct_config.worker_ign.rendered}"
+    user-data = "${data.ct_config.worker-ignition.rendered}"
   }
 
   scheduling {
@@ -74,5 +61,24 @@ resource "google_compute_instance_template" "worker" {
   lifecycle {
     # To update an Instance Template, Terraform should replace the existing resource
     create_before_destroy = true
+  }
+}
+
+# Worker Ignition config
+data "ct_config" "worker-ignition" {
+  content      = "${data.template_file.worker-config.rendered}"
+  pretty_print = false
+  snippets     = ["${var.clc_snippets}"]
+}
+
+# Worker Container Linux config
+data "template_file" "worker-config" {
+  template = "${file("${path.module}/cl/worker.yaml.tmpl")}"
+
+  vars = {
+    kubeconfig             = "${indent(10, var.kubeconfig)}"
+    ssh_authorized_key     = "${var.ssh_authorized_key}"
+    cluster_dns_service_ip = "${cidrhost(var.service_cidr, 10)}"
+    cluster_domain_suffix  = "${var.cluster_domain_suffix}"
   }
 }
