@@ -4,17 +4,31 @@ Notable changes between versions.
 
 ## Latest
 
-* Add ServiceAccounts for `kube-apiserver` and `kube-scheduler` ([#370](https://github.com/poseidon/typhoon/pull/370))
-* Use a lower-privilege TLS client certificate with org `system:nodes` for Kubelets ([#372](https://github.com/poseidon/typhoon/pull/372))
-  * Bind the `system:nodes` group to the `system:node` ClusterRole
-* Allow the `certificates.k8s.io` API to issue certificates signed by the cluster CA ([#376](https://github.com/poseidon/typhoon/pull/376))
-  * Configure controller manager to sign CSRs that are manually [approved](https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster) by an administrator
-* Update CoreDNS from v1.2.6 to [v1.3.0](https://coredns.io/2018/12/15/coredns-1.3.0-release/)
-* Use HTTPS liveness probes for `kube-scheduler` and `kube-controller-manager` ([#377](https://github.com/poseidon/typhoon/pull/377))
+* Update etcd from v3.3.10 to [v3.3.11](https://github.com/etcd-io/etcd/blob/master/CHANGELOG-3.3.md#v3311-2019-1-11)
+* Fix instance shutdown automatic worker deletion on cloud platforms
+  * Lowering Kubelet privileges in [#372](https://github.com/poseidon/typhoon/pull/372) dropped a needed node deletion authorization. Scale-in due to manual terraform apply (any cloud), AWS spot termination, or Azure low priority deletion left old nodes registered, requiring manual deletion (`kubectl delete node name`)
 
 #### AWS
 
-* Change `controller_type` and `worker_type` default from t2.small to t3.small
+* Add `ingress_zone_id` output with the NLB DNS name's Route53 zone for use in alias records ([#380](https://github.com/poseidon/typhoon/pull/380))
+
+#### Addons
+
+* Update kube-state-metrics from v1.4.0 to v1.5.0
+
+## v1.13.2
+
+* Kubernetes [v1.13.2](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG-1.13.md#v1132)
+* Add ServiceAccounts for `kube-apiserver` and `kube-scheduler` ([#370](https://github.com/poseidon/typhoon/pull/370))
+* Use lower-privilege TLS client certificates for Kubelets ([#372](https://github.com/poseidon/typhoon/pull/372))
+* Use HTTPS liveness probes for `kube-scheduler` and `kube-controller-manager` ([#377](https://github.com/poseidon/typhoon/pull/377))
+* Update CoreDNS from v1.2.6 to [v1.3.0](https://coredns.io/2018/12/15/coredns-1.3.0-release/)
+* Allow the `certificates.k8s.io` API to issue certificates signed by the cluster CA ([#376](https://github.com/poseidon/typhoon/pull/376))
+  * Configure controller manager to sign CSRs that are manually [approved](https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster) by an administrator
+
+#### AWS
+
+* Change `controller_type` and `worker_type` default from t2.small to t3.small ([#365](https://github.com/poseidon/typhoon/pull/365))
   * t3.small is cheaper, provides 2 vCPU (instead of 1), and 5 Gbps of pod-to-pod bandwidth!
 
 #### Bare-Metal

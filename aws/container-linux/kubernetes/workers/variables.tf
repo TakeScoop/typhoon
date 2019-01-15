@@ -35,7 +35,7 @@ variable "count" {
 
 variable "instance_type" {
   type        = "string"
-  default     = "t2.small"
+  default     = "t3.small"
   description = "EC2 instance type"
 }
 
