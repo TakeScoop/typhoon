@@ -15,12 +15,7 @@ module "workers" {
   spot_price      = "${var.worker_price}"
 
   # configuration
-<<<<<<< HEAD
   kubeconfig            = "${module.bootkube.kubeconfig-kubelet}"
-=======
-  kubeconfig            = "${module.bootkube.kubeconfig-kubelet}"
-  ssh_authorized_key    = "${var.ssh_authorized_key}"
->>>>>>> poseidon/master
   service_cidr          = "${var.service_cidr}"
   cluster_domain_suffix = "${var.cluster_domain_suffix}"
   clc_snippets          = "${var.worker_clc_snippets}"
