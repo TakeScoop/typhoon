@@ -35,6 +35,11 @@ output "kubeconfig" {
   value = "${module.bootkube.kubeconfig-kubelet}"
 }
 
+output "kube_ca" {
+  description = "Base64-encoded CA cert data for Kubernetes apiserver"
+  value       = "${module.bootkube.ca_cert}"
+}
+
 # Outputs for custom load balancing
 
 output "worker_target_group_http" {
