@@ -70,7 +70,7 @@ resource "aws_launch_configuration" "worker" {
   lifecycle {
     // Override the default destroy and replace update behavior
     create_before_destroy = true
-    ignore_changes        = ["image_id"]
+    ignore_changes        = ["image_id", "user_data"]
   }
 }
 
