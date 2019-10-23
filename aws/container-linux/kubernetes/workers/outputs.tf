@@ -12,3 +12,8 @@ output "instance_role" {
   value       = "${aws_iam_role.worker.arn}"
   description = "IAM role ARN attached to instances via instance profile"
 }
+
+output "autoscale_group_name" {
+  value       = "${aws_autoscaling_group.workers.name}"
+  description = "Name of the workers autoscale group"
+}
