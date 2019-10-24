@@ -99,6 +99,6 @@ output "worker_role" {
 }
 
 output "worker_autoscaling_group" {
-  value       = "${module.workers.autoscale_group_name}"
+  value       = "${module.workers.autoscaling_group}"
   description = "Name of the workers autoscaling group"
 }
