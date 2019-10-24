@@ -98,7 +98,7 @@ output "worker_role" {
   description = "Instance role ARN attached to worker instances via instance profile"
 }
 
-output "worker_autoscale_group_name" {
+output "worker_autoscaling_group" {
   value       = "${module.workers.autoscale_group_name}"
-  description = "Name of the workers autoscale group"
+  description = "Name of the workers autoscaling group"
 }

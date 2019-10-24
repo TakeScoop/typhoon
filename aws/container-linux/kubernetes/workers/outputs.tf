@@ -13,7 +13,7 @@ output "instance_role" {
   description = "IAM role ARN attached to instances via instance profile"
 }
 
-output "autoscale_group_name" {
+output "autoscaling_group" {
   value       = "${aws_autoscaling_group.workers.name}"
-  description = "Name of the workers autoscale group"
+  description = "Name of the workers autoscaling group"
 }
