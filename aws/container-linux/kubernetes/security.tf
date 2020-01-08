@@ -14,11 +14,21 @@ resource "aws_security_group" "controller" {
 resource "aws_security_group_rule" "controller-ssh" {
   security_group_id = "${aws_security_group.controller.id}"
 
-  type        = "ingress"
-  protocol    = "tcp"
-  from_port   = 22
-  to_port     = 22
-  cidr_blocks = ["0.0.0.0/0"]
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 22
+  to_port                  = 22
+  source_security_group_id = "${aws_security_group.worker.id}"
+}
+
+resource "aws_security_group_rule" "controller-ssh-self" {
+  security_group_id = "${aws_security_group.controller.id}"
+
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 22
+  to_port   = 22
+  self      = true
 }
 
 resource "aws_security_group_rule" "controller-etcd" {
@@ -199,11 +209,21 @@ resource "aws_security_group" "worker" {
 resource "aws_security_group_rule" "worker-ssh" {
   security_group_id = "${aws_security_group.worker.id}"
 
-  type        = "ingress"
-  protocol    = "tcp"
-  from_port   = 22
-  to_port     = 22
-  cidr_blocks = ["0.0.0.0/0"]
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 22
+  to_port                  = 22
+  source_security_group_id = "${aws_security_group.controller.id}"
+}
+
+resource "aws_security_group_rule" "worker-ssh-self" {
+  security_group_id = "${aws_security_group.worker.id}"
+
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 22
+  to_port   = 22
+  self      = true
 }
 
 resource "aws_security_group_rule" "worker-http" {
