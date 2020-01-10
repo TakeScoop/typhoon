@@ -196,6 +196,16 @@ resource "aws_security_group" "worker" {
   tags = "${map("Name", "${var.cluster_name}-worker")}"
 }
 
+resource "aws_security_group_rule" "worker-ssh-bastion" {
+  security_group_id = "${aws_security_group.worker.id}"
+
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 22
+  to_port   = 22
+  cidr_blocks = [aws_security_group.bastion_internal.egress]
+}
+
 resource "aws_security_group_rule" "worker-ssh-self" {
   security_group_id = "${aws_security_group.worker.id}"
 
