@@ -21,16 +21,6 @@ resource "aws_security_group_rule" "controller-ssh" {
   source_security_group_id = "${aws_security_group.worker.id}"
 }
 
-resource "aws_security_group_rule" "controller-ssh-self" {
-  security_group_id = "${aws_security_group.controller.id}"
-
-  type      = "ingress"
-  protocol  = "tcp"
-  from_port = 22
-  to_port   = 22
-  self      = true
-}
-
 resource "aws_security_group_rule" "controller-etcd" {
   security_group_id = "${aws_security_group.controller.id}"
 
@@ -204,16 +194,6 @@ resource "aws_security_group" "worker" {
   vpc_id = "${aws_vpc.network.id}"
 
   tags = "${map("Name", "${var.cluster_name}-worker")}"
-}
-
-resource "aws_security_group_rule" "worker-ssh" {
-  security_group_id = "${aws_security_group.worker.id}"
-
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 22
-  to_port                  = 22
-  source_security_group_id = "${aws_security_group.controller.id}"
 }
 
 resource "aws_security_group_rule" "worker-ssh-self" {
