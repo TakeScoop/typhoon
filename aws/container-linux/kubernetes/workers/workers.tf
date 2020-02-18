@@ -90,6 +90,7 @@ data "template_file" "worker-config" {
     kubeconfig             = "${indent(10, var.kubeconfig)}"
     cluster_dns_service_ip = "${cidrhost(var.service_cidr, 10)}"
     cluster_domain_suffix  = "${var.cluster_domain_suffix}"
+    node_labels            = "${join(",", var.node_labels)}"
   }
 }
 

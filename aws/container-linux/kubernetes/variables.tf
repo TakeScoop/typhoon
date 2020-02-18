@@ -151,14 +151,14 @@ variable "apiserver_port" {
 }
 
 variable "apiserver_aliases" {
-  type = "list"
+  type        = "list"
   description = "List of alternate DNS names that can be used to address the Kubernetes API"
-  default = []
+  default     = []
 }
 
 variable "apiserver_arguments" {
-  type = "list"
-  default = []
+  type        = "list"
+  default     = []
   description = "Custom arguments to pass to the kube-apiserver"
 }
 
@@ -178,11 +178,11 @@ variable "amis" {
   description = "Static AMIs to use for different cluster roles. When no value is set for a role, the latest stable CoreOS AMI is used"
   type        = "map"
   # assign an empty string value so terraform can detect the value type for the map
-  default     = {"" = ""}
+  default = { "" = "" }
 }
 
 variable "ssh_user" {
-  type = "string"
+  type        = "string"
   description = "Username for provisioning via SSH"
 }
 
@@ -211,13 +211,13 @@ variable "ca_key" {
 }
 
 variable "subnet_tags_private" {
-  type = "map"
+  type        = "map"
   description = "Tags to apply to private subnets"
-  default = {}
+  default     = {}
 }
 
 variable "subnet_tags_public" {
-  type = "map"
+  type        = "map"
   description = "Tags to apply to public subnets"
-  default = {}
+  default     = {}
 }

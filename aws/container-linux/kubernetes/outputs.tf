@@ -57,7 +57,7 @@ output "worker_target_group_https" {
 output "bastion_dns_name" {
   value       = "${aws_lb.bastion.dns_name}"
   description = "DNS name of the network load balancer for distributing traffic to bastion hosts"
-  
+
   depends_on = [
     "aws_autoscaling_group.bastion"
   ]

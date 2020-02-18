@@ -98,10 +98,16 @@ variable "cluster_domain_suffix" {
   default     = "cluster.local"
 }
 
+variable "node_labels" {
+  description = "List of additional labels to add to worker nodes"
+  type        = "list"
+  default     = []
+}
+
 # Scoop variables
 
 variable "ami" {
-  type = "string"
+  type        = "string"
   description = "Custom AMI to use for launching workers (defaults to latest stable CoreOS)"
-  default = ""
+  default     = ""
 }
