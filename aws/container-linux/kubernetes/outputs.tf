@@ -21,9 +21,14 @@ output "vpc_id" {
   description = "ID of the VPC for creating worker instances"
 }
 
-output "subnet_ids" {
+output "private_subnet_ids" {
+  value       = ["${aws_subnet.private.*.id}"]
+  description = "List of private subnet IDs"
+}
+
+output "public_subnet_ids" {
   value       = ["${aws_subnet.public.*.id}"]
-  description = "List of subnet IDs for creating worker instances"
+  description = "List of public subnet IDs"
 }
 
 output "worker_security_groups" {
@@ -81,6 +86,11 @@ output nat_ips {
 output "private_route_tables" {
   value       = ["${aws_route_table.private.*.id}"]
   description = "ID of the private route table that can be used to add additional private routes"
+}
+
+output "public_route_tables" {
+  value       = ["${aws_route_table.public.*.id}"]
+  description = "IDs of the public route tables"
 }
 
 output "depends_id" {
