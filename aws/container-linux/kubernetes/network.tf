@@ -24,17 +24,19 @@ resource "aws_internet_gateway" "gateway" {
 resource "aws_route_table" "public" {
   vpc_id = "${aws_vpc.network.id}"
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.gateway.id}"
-  }
-
-  route {
-    ipv6_cidr_block = "::/0"
-    gateway_id      = "${aws_internet_gateway.gateway.id}"
-  }
-
   tags = "${map("Name", "${var.cluster_name}-public")}"
+}
+
+resource "aws_route" "internet_gateway" {
+  route_table_id         = "${aws_route_table.public.id}"
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = "${aws_internet_gateway.gateway.id}"
+}
+
+resource "aws_route" "ipv6_internet_gateway" {
+  route_table_id              = "${aws_route_table.public.id}"
+  destination_ipv6_cidr_block = "::/0"
+  gateway_id                  = "${aws_internet_gateway.gateway.id}"
 }
 
 # Subnets (one per availability zone)
