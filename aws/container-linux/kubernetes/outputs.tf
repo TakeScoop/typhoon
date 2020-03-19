@@ -90,7 +90,7 @@ output "private_route_tables" {
 
 output "public_route_tables" {
   value       = ["${aws_route_table.public.*.id}"]
-  description = "ID of the public route tables"
+  description = "IDs of the public route tables"
 }
 
 output "depends_id" {
