@@ -2,21 +2,21 @@ resource "aws_autoscaling_group" "bastion" {
   name = "${var.cluster_name}-bastion ${aws_launch_configuration.bastion.name}"
 
   # count
-  desired_capacity          = "${var.bastion_count}"
-  min_size                  = "${var.bastion_count}"
-  max_size                  = "${var.bastion_count}"
+  desired_capacity          = var.bastion_count
+  min_size                  = var.bastion_count
+  max_size                  = var.bastion_count
   default_cooldown          = 30
   health_check_grace_period = 30
 
   # network
-  vpc_zone_identifier = ["${aws_subnet.private.*.id}"]
+  vpc_zone_identifier = aws_subnet.private.*.id
 
   # template
-  launch_configuration = "${aws_launch_configuration.bastion.name}"
+  launch_configuration = aws_launch_configuration.bastion.name
 
   # target groups to which instances should be added
   target_group_arns = [
-    "${aws_lb_target_group.bastion.id}"
+    aws_lb_target_group.bastion.id
   ]
 
   min_elb_capacity = 1
@@ -24,7 +24,7 @@ resource "aws_autoscaling_group" "bastion" {
   lifecycle {
     # override the default destroy and replace update behavior
     create_before_destroy = true
-    ignore_changes        = ["image_id"]
+    ignore_changes        = [launch_configuration]
   }
 
   tags = [{
@@ -35,14 +35,14 @@ resource "aws_autoscaling_group" "bastion" {
 }
 
 resource "aws_launch_configuration" "bastion" {
-  image_id      = "${lookup(var.amis, "bastion", data.aws_ami.coreos.image_id)}"
-  instance_type = "${var.bastion_type}"
+  image_id      = lookup(var.amis, "bastion", data.aws_ami.coreos.image_id)
+  instance_type = var.bastion_type
 
-  user_data = "${data.ct_config.bastion_ign.rendered}"
+  user_data = data.ct_config.bastion_ign.rendered
 
   # network
   security_groups = [
-    "${aws_security_group.bastion_external.id}"
+    aws_security_group.bastion_external.id
   ]
 
   lifecycle {
@@ -52,36 +52,36 @@ resource "aws_launch_configuration" "bastion" {
 }
 
 data "template_file" "bastion_config" {
-  template = "${file("${path.module}/cl/bastion.yaml.tmpl")}"
+  template = file("${path.module}/cl/bastion.yaml.tmpl")
 }
 
 data "ct_config" "bastion_ign" {
-  content = "${data.template_file.bastion_config.rendered}"
+  content      = data.template_file.bastion_config.rendered
   pretty_print = false
-  snippets     = ["${var.bastion_clc_snippets}"]
+  snippets     = var.bastion_clc_snippets
 }
 
 resource "aws_security_group" "bastion_external" {
   name_prefix = "${var.cluster_name}-bastion-external-"
   description = "Allows access to the bastion from the internet"
 
-  vpc_id = "${aws_vpc.network.id}"
+  vpc_id = aws_vpc.network.id
 
-  tags {
+  tags = {
     Name = "${var.cluster_name}-bastion-external"
   }
 
   ingress {
-    protocol = "tcp"
-    from_port = 22
-    to_port = 22
+    protocol    = "tcp"
+    from_port   = 22
+    to_port     = 22
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    protocol = -1
-    from_port = 0
-    to_port = 0
+    protocol    = -1
+    from_port   = 0
+    to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -94,17 +94,17 @@ resource "aws_security_group" "bastion_internal" {
   name_prefix = "${var.cluster_name}-bastion-internal-"
   description = "Allows access to a host from the bastion"
 
-  vpc_id = "${aws_vpc.network.id}"
+  vpc_id = aws_vpc.network.id
 
-  tags {
+  tags = {
     Name = "${var.cluster_name}-bastion-internal"
   }
 
   ingress {
-    protocol = "tcp"
-    from_port = 22
-    to_port = 22
-    security_groups = ["${aws_security_group.bastion_external.id}"]
+    protocol        = "tcp"
+    from_port       = 22
+    to_port         = 22
+    security_groups = [aws_security_group.bastion_external.id]
   }
 
   lifecycle {
@@ -116,24 +116,24 @@ resource "aws_lb" "bastion" {
   name               = "${var.cluster_name}-bastion"
   load_balancer_type = "network"
 
-  subnets = ["${aws_subnet.public.*.id}"]
+  subnets = aws_subnet.public.*.id
 }
 
 
 resource "aws_lb_listener" "bastion" {
-  load_balancer_arn = "${aws_lb.bastion.arn}"
+  load_balancer_arn = aws_lb.bastion.arn
   protocol          = "TCP"
   port              = "22"
 
   default_action {
     type             = "forward"
-    target_group_arn = "${aws_lb_target_group.bastion.arn}"
+    target_group_arn = aws_lb_target_group.bastion.arn
   }
 }
 
 resource "aws_lb_target_group" "bastion" {
   name        = "${var.cluster_name}-bastion"
-  vpc_id      = "${aws_vpc.network.id}"
+  vpc_id      = aws_vpc.network.id
   target_type = "instance"
 
   protocol = "TCP"
@@ -151,16 +151,16 @@ resource "aws_lb_target_group" "bastion" {
 }
 
 resource "aws_route53_record" "bastion" {
-  depends_on = ["aws_autoscaling_group.bastion"]
+  depends_on = [aws_autoscaling_group.bastion]
 
-  zone_id = "${var.dns_zone_id}"
+  zone_id = var.dns_zone_id
 
-  name = "${format("bastion.%s.%s.", var.cluster_name, var.dns_zone)}"
+  name = format("bastion.%s.%s.", var.cluster_name, var.dns_zone)
   type = "A"
 
   alias {
-    name                   = "${aws_lb.bastion.dns_name}"
-    zone_id                = "${aws_lb.bastion.zone_id}"
+    name                   = aws_lb.bastion.dns_name
+    zone_id                = aws_lb.bastion.zone_id
     evaluate_target_health = false
   }
 }

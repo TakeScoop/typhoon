@@ -1,32 +1,32 @@
 # Digital Ocean
 
-In this tutorial, we'll create a Kubernetes v1.13.2 cluster on DigitalOcean with Container Linux.
+In this tutorial, we'll create a Kubernetes v1.18.2 cluster on DigitalOcean with CoreOS Container Linux or Flatcar Linux.
 
 We'll declare a Kubernetes cluster using the Typhoon Terraform module. Then apply the changes to create controller droplets, worker droplets, DNS records, tags, and TLS assets.
 
-Controllers are provisioned to run an `etcd-member` peer and a `kubelet` service. Workers run just a `kubelet` service. A one-time [bootkube](https://github.com/kubernetes-incubator/bootkube) bootstrap schedules the `apiserver`, `scheduler`, `controller-manager`, and `coredns` on controllers and schedules `kube-proxy` and `flannel` on every node. A generated `kubeconfig` provides `kubectl` access to the cluster.
+Controller hosts are provisioned to run an `etcd-member` peer and a `kubelet` service. Worker hosts run a `kubelet` service. Controller nodes run `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, and `coredns`, while `kube-proxy` and `calico` (or `flannel`) run on every node. A generated `kubeconfig` provides `kubectl` access to the cluster.
 
 ## Requirements
 
 * Digital Ocean Account and Token
 * Digital Ocean Domain (registered Domain Name or delegated subdomain)
-* Terraform v0.11.x and [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) installed locally
+* Terraform v0.12.6+ and [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) installed locally
 
 ## Terraform Setup
 
-Install [Terraform](https://www.terraform.io/downloads.html) v0.11.x on your system.
+Install [Terraform](https://www.terraform.io/downloads.html) v0.12.6+ on your system.
 
 ```sh
 $ terraform version
-Terraform v0.11.12
+Terraform v0.12.21
 ```
 
-Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
+Add the [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.3.0/terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
-mv terraform-provider-ct-v0.3.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.3.0
+wget https://github.com/poseidon/terraform-provider-ct/releases/download/v0.5.0/terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
+mv terraform-provider-ct-v0.5.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.5.0
 ```
 
 Read [concepts](/architecture/concepts/) to learn about Terraform, modules, and organizing resources. Change to your infrastructure repository (e.g. `infra`).
@@ -50,51 +50,36 @@ Configure the DigitalOcean provider to use your token in a `providers.tf` file.
 
 ```tf
 provider "digitalocean" {
-  version = "1.0.0"
+  version = "1.15.1"
   token = "${chomp(file("~/.config/digital-ocean/token"))}"
-  alias = "default"
 }
 
 provider "ct" {
-  version = "0.3.0"
-}
-
-provider "local" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "null" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "template" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "tls" {
-  version = "~> 1.0"
-  alias = "default"
+  version = "0.5.0"
 }
 ```
+
+### Flatcar Linux Images
+
+Flatcar Linux publishes DigitalOcean images, but does not yet upload them. DigitalOcean allows [custom images](https://blog.digitalocean.com/custom-images/) to be uploaded via URLor file.
+
+[Download](https://www.flatcar-linux.org/releases/) the Flatcar Linux DigitalOcean bin image. Rename the image with the channel and version (to refer to these images over time) and [upload](https://cloud.digitalocean.com/images/custom_images) it as a custom image.
+
+```tf
+data "digitalocean_image" "flatcar-stable-2303-4-0" {
+  name = "flatcar-stable-2303.4.0.bin.bz2"
+}
+```
+
+Set the [os_image](#variables) in the next step.
 
 ## Cluster
 
 Define a Kubernetes cluster using the module `digital-ocean/container-linux/kubernetes`.
 
 ```tf
-module "digital-ocean-nemo" {
-  source = "git::https://github.com/poseidon/typhoon//digital-ocean/container-linux/kubernetes?ref=v1.13.2"
-  
-  providers = {
-    digitalocean = "digitalocean.default"
-    local = "local.default"
-    null = "null.default"
-    template = "template.default"
-    tls = "tls.default"
-  }
+module "nemo" {
+  source = "git::https://github.com/poseidon/typhoon//digital-ocean/container-linux/kubernetes?ref=v1.18.2"
 
   # Digital Ocean
   cluster_name = "nemo"
@@ -102,12 +87,11 @@ module "digital-ocean-nemo" {
   dns_zone     = "digital-ocean.example.com"
 
   # configuration
+  os_image         = data.digitalocean_image.flatcar-stable-2303-4-0.id
   ssh_fingerprints = ["d7:9d:79:ae:56:32:73:79:95:88:e3:a2:ab:5d:45:e7"]
-  asset_dir        = "/home/user/.secrets/clusters/nemo"
-  
+
   # optional
   worker_count = 2
-  worker_type  = "s-1vcpu-1gb"
 }
 ```
 
@@ -115,7 +99,7 @@ Reference the [variables docs](#variables) or the [variables.tf](https://github.
 
 ## ssh-agent
 
-Initial bootstrapping requires `bootkube.service` be started on one controller node. Terraform uses `ssh-agent` to automate this step. Add your SSH private key to `ssh-agent`.
+Initial bootstrapping requires `bootstrap.service` be started on one controller node. Terraform uses `ssh-agent` to automate this step. Add your SSH private key to `ssh-agent`.
 
 ```sh
 ssh-add ~/.ssh/id_rsa
@@ -141,28 +125,37 @@ Apply the changes to create the cluster.
 
 ```sh
 $ terraform apply
-module.digital-ocean-nemo.null_resource.bootkube-start: Still creating... (30s elapsed)
-module.digital-ocean-nemo.null_resource.bootkube-start: Provisioning with 'remote-exec'...
+module.nemo.null_resource.bootstrap: Still creating... (30s elapsed)
+module.nemo.null_resource.bootstrap: Provisioning with 'remote-exec'...
 ...
-module.digital-ocean-nemo.null_resource.bootkube-start: Still creating... (6m20s elapsed)
-module.digital-ocean-nemo.null_resource.bootkube-start: Creation complete (ID: 7599298447329218468)
+module.nemo.null_resource.bootstrap: Still creating... (6m20s elapsed)
+module.nemo.null_resource.bootstrap: Creation complete (ID: 7599298447329218468)
 
-Apply complete! Resources: 54 added, 0 changed, 0 destroyed.
+Apply complete! Resources: 42 added, 0 changed, 0 destroyed.
 ```
 
 In 3-6 minutes, the Kubernetes cluster will be ready.
 
 ## Verify
 
-[Install kubectl](https://coreos.com/kubernetes/docs/latest/configure-kubectl.html) on your system. Use the generated `kubeconfig` credentials to access the Kubernetes cluster and list nodes.
+[Install kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) on your system. Obtain the generated cluster `kubeconfig` from module outputs (e.g. write to a local file).
 
 ```
-$ export KUBECONFIG=/home/user/.secrets/clusters/nemo/auth/kubeconfig
+resource "local_file" "kubeconfig-nemo" {
+  content  = module.nemo.kubeconfig-admin
+  filename = "/home/user/.kube/configs/nemo-config"
+}
+```
+
+List nodes in the cluster.
+
+```
+$ export KUBECONFIG=/home/user/.kube/configs/nemo-config
 $ kubectl get nodes
-NAME               STATUS  ROLES              AGE  VERSION
-nemo-controller-0  Ready   controller,master  10m  v1.13.2
-nemo-worker-0      Ready   node               10m  v1.13.2
-nemo-worker-1      Ready   node               10m  v1.13.2
+NAME               STATUS  ROLES   AGE  VERSION
+10.132.110.130     Ready   <none>  10m  v1.18.2
+10.132.115.81      Ready   <none>  10m  v1.18.2
+10.132.124.107     Ready   <none>  10m  v1.18.2
 ```
 
 List the pods.
@@ -171,27 +164,20 @@ List the pods.
 NAMESPACE     NAME                                       READY     STATUS    RESTARTS   AGE
 kube-system   coredns-1187388186-ld1j7                   1/1       Running   0          11m
 kube-system   coredns-1187388186-rdhf7                   1/1       Running   0          11m
-kube-system   flannel-1cq1v                              2/2       Running   0          11m
-kube-system   flannel-hq9t0                              2/2       Running   1          11m
-kube-system   flannel-v0g9w                              2/2       Running   0          11m
-kube-system   kube-apiserver-n10qr                       1/1       Running   0          11m
-kube-system   kube-controller-manager-3271970485-37gtw   1/1       Running   1          11m
-kube-system   kube-controller-manager-3271970485-p52t5   1/1       Running   0          11m
+kube-system   calico-node-1m5bf                          2/2       Running   0          11m
+kube-system   calico-node-7jmr1                          2/2       Running   0          11m
+kube-system   calico-node-bknc8                          2/2       Running   0          11m
+kube-system   kube-apiserver-ip-10.132.115.81            1/1       Running   0          11m
+kube-system   kube-controller-manager-ip-10.132.115.81   1/1       Running   0          11m
 kube-system   kube-proxy-6kxjf                           1/1       Running   0          11m
 kube-system   kube-proxy-fh3td                           1/1       Running   0          11m
 kube-system   kube-proxy-k35rc                           1/1       Running   0          11m
-kube-system   kube-scheduler-3895335239-2bc4c            1/1       Running   0          11m
-kube-system   kube-scheduler-3895335239-b7q47            1/1       Running   1          11m
-kube-system   pod-checkpointer-pr1lq                     1/1       Running   0          11m
-kube-system   pod-checkpointer-pr1lq-nemo-controller-0   1/1       Running   0          10m
+kube-system   kube-scheduler-ip-10.132.115.81            1/1       Running   0          11m
 ```
 
 ## Going Further
 
 Learn about [maintenance](/topics/maintenance/) and [addons](/addons/overview/).
-
-!!! note
-    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -201,22 +187,22 @@ Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/digital
 
 | Name | Description | Example |
 |:-----|:------------|:--------|
-| cluster_name | Unique cluster name (prepended to dns_zone) | nemo |
-| region | Digital Ocean region | nyc1, sfo2, fra1, tor1 |
-| dns_zone | Digital Ocean domain (i.e. DNS zone) | do.example.com |
+| cluster_name | Unique cluster name (prepended to dns_zone) | "nemo" |
+| region | Digital Ocean region | "nyc1", "sfo2", "fra1", tor1" |
+| dns_zone | Digital Ocean domain (i.e. DNS zone) | "do.example.com" |
+| os_image | Container Linux image for instances | "custom-image-id", coreos-stable, coreos-beta, coreos-alpha |
 | ssh_fingerprints | SSH public key fingerprints | ["d7:9d..."] |
-| asset_dir | Path to a directory where generated assets should be placed (contains secrets) | /home/user/.secrets/nemo |
 
 #### DNS Zone
 
 Clusters create DNS A records `${cluster_name}.${dns_zone}` to resolve to controller droplets (round robin). This FQDN is used by workers and `kubectl` to access the apiserver(s). In this example, the cluster's apiserver would be accessible at `nemo.do.example.com`.
 
-You'll need a registered domain name or delegated subdomain in Digital Ocean Domains (i.e. DNS zones). You can set this up once and create many clusters with unique names.
+You'll need a registered domain name or delegated subdomain in DigitalOcean Domains (i.e. DNS zones). You can set this up once and create many clusters with unique names.
 
 ```tf
+# Declare a DigitalOcean record to also create a zone file
 resource "digitalocean_domain" "zone-for-clusters" {
   name       = "do.example.com"
-  # Digital Ocean oddly requires an IP here. You may have to delete the A record it makes. :(
   ip_address = "8.8.8.8"
 }
 ```
@@ -248,14 +234,13 @@ Digital Ocean requires the SSH public key be uploaded to your account, so you ma
 |:-----|:------------|:--------|:--------|
 | controller_count | Number of controllers (i.e. masters) | 1 | 1 |
 | worker_count | Number of workers | 1 | 3 |
-| controller_type | Droplet type for controllers | s-2vcpu-2gb | s-2vcpu-2gb, s-2vcpu-4gb, s-4vcpu-8gb, ... |
-| worker_type | Droplet type for workers | s-1vcpu-1gb | s-1vcpu-1gb, s-1vcpu-2gb, s-2vcpu-2gb, ... |
-| image | Container Linux image for instances | "coreos-stable" | coreos-stable, coreos-beta, coreos-alpha |
-| controller_clc_snippets | Controller Container Linux Config snippets | [] | [example](/advanced/customization/) |
-| worker_clc_snippets | Worker Container Linux Config snippets | [] | [example](/advanced/customization/) |
+| controller_type | Droplet type for controllers | "s-2vcpu-2gb" | s-2vcpu-2gb, s-2vcpu-4gb, s-4vcpu-8gb, ... |
+| worker_type | Droplet type for workers | "s-1vcpu-2gb" | s-1vcpu-2gb, s-2vcpu-2gb, ... |
+| controller_snippets | Controller Container Linux Config snippets | [] | [example](/advanced/customization/) |
+| worker_snippets | Worker Container Linux Config snippets | [] | [example](/advanced/customization/) |
+| networking | Choice of networking provider | "calico" | "flannel" or "calico" |
 | pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
 | service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
-| cluster_domain_suffix | FQDN suffix for Kubernetes services answered by coredns. | "cluster.local" | "k8s.example.com" |
 
 Check the list of valid [droplet types](https://developers.digitalocean.com/documentation/changelog/api-v2/new-size-slugs-for-droplet-plan-changes/) or use `doctl compute size list`.
 

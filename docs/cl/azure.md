@@ -1,35 +1,32 @@
 # Azure
 
-!!! danger
-    Typhoon for Azure is alpha. For production, use AWS, Google Cloud, or bare-metal. As Azure matures, check [errata](https://github.com/poseidon/typhoon/wiki/Errata) for known shortcomings.
-
-In this tutorial, we'll create a Kubernetes v1.13.2 cluster on Azure with Container Linux.
+In this tutorial, we'll create a Kubernetes v1.18.2 cluster on Azure with CoreOS Container Linux or Flatcar Linux.
 
 We'll declare a Kubernetes cluster using the Typhoon Terraform module. Then apply the changes to create a resource group, virtual network, subnets, security groups, controller availability set, worker scale set, load balancer, and TLS assets.
 
-Controllers are provisioned to run an `etcd-member` peer and a `kubelet` service. Workers run just a `kubelet` service. A one-time [bootkube](https://github.com/kubernetes-incubator/bootkube) bootstrap schedules the `apiserver`, `scheduler`, `controller-manager`, and `coredns` on controllers and schedules `kube-proxy` and `flannel` on every node. A generated `kubeconfig` provides `kubectl` access to the cluster.
+Controller hosts are provisioned to run an `etcd-member` peer and a `kubelet` service. Worker hosts run a `kubelet` service. Controller nodes run `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, and `coredns`, while `kube-proxy` and `calico` (or `flannel`) run on every node. A generated `kubeconfig` provides `kubectl` access to the cluster.
 
 ## Requirements
 
 * Azure account
 * Azure DNS Zone (registered Domain Name or delegated subdomain)
-* Terraform v0.11.x and [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) installed locally
+* Terraform v0.12.6+ and [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) installed locally
 
 ## Terraform Setup
 
-Install [Terraform](https://www.terraform.io/downloads.html) v0.11.x on your system.
+Install [Terraform](https://www.terraform.io/downloads.html) v0.12.6+ on your system.
 
 ```sh
 $ terraform version
-Terraform v0.11.12
+Terraform v0.12.21
 ```
 
-Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
+Add the [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.3.0/terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
-mv terraform-provider-ct-v0.3.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.3.0
+wget https://github.com/poseidon/terraform-provider-ct/releases/download/v0.5.0/terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
+mv terraform-provider-ct-v0.5.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.5.0
 ```
 
 Read [concepts](/architecture/concepts/) to learn about Terraform, modules, and organizing resources. Change to your infrastructure repository (e.g. `infra`).
@@ -50,32 +47,11 @@ Configure the Azure provider in a `providers.tf` file.
 
 ```tf
 provider "azurerm" {
-  version = "1.16.0"
-  alias   = "default"
+  version = "2.5.0"
 }
 
 provider "ct" {
-  version = "0.3.0"
-}
-
-provider "local" {
-  version = "~> 1.0"
-  alias   = "default"
-}
-
-provider "null" {
-  version = "~> 1.0"
-  alias   = "default"
-}
-
-provider "template" {
-  version = "~> 1.0"
-  alias   = "default"
-}
-
-provider "tls" {
-  version = "~> 1.0"
-  alias   = "default"
+  version = "0.5.0"
 }
 ```
 
@@ -86,16 +62,8 @@ Additional configuration options are described in the `azurerm` provider [docs](
 Define a Kubernetes cluster using the module `azure/container-linux/kubernetes`.
 
 ```tf
-module "azure-ramius" {
-  source = "git::https://github.com/poseidon/typhoon//azure/container-linux/kubernetes?ref=v1.13.2"
-
-  providers = {
-    azurerm  = "azurerm.default"
-    local    = "local.default"
-    null     = "null.default"
-    template = "template.default"
-    tls      = "tls.default"
-  }
+module "ramius" {
+  source = "git::https://github.com/poseidon/typhoon//azure/container-linux/kubernetes?ref=v1.18.2"
 
   # Azure
   cluster_name   = "ramius"
@@ -105,7 +73,6 @@ module "azure-ramius" {
 
   # configuration
   ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
-  asset_dir          = "/home/user/.secrets/clusters/ramius"
 
   # optional
   worker_count    = 2
@@ -115,9 +82,18 @@ module "azure-ramius" {
 
 Reference the [variables docs](#variables) or the [variables.tf](https://github.com/poseidon/typhoon/blob/master/azure/container-linux/kubernetes/variables.tf) source.
 
+### Flatcar Linux Only
+
+Flatcar Linux publishes images to the Azure Marketplace and requires accepting their legal terms.
+
+```
+az vm image terms show --publish kinvolk --offer flatcar-container-linux --plan stable
+az vm image terms accept --publish kinvolk --offer flatcar-container-linux --plan stable
+```
+
 ## ssh-agent
 
-Initial bootstrapping requires `bootkube.service` be started on one controller node. Terraform uses `ssh-agent` to automate this step. Add your SSH private key to `ssh-agent`.
+Initial bootstrapping requires `bootstrap.service` be started on one controller node. Terraform uses `ssh-agent` to automate this step. Add your SSH private key to `ssh-agent`.
 
 ```sh
 ssh-add ~/.ssh/id_rsa
@@ -144,26 +120,35 @@ Apply the changes to create the cluster.
 ```sh
 $ terraform apply
 ...
-module.azure-ramius.null_resource.bootkube-start: Still creating... (6m50s elapsed)
-module.azure-ramius.null_resource.bootkube-start: Still creating... (7m0s elapsed)
-module.azure-ramius.null_resource.bootkube-start: Creation complete after 7m8s (ID: 3961816482286168143)
+module.ramius.null_resource.bootstrap: Still creating... (6m50s elapsed)
+module.ramius.null_resource.bootstrap: Still creating... (7m0s elapsed)
+module.ramius.null_resource.bootstrap: Creation complete after 7m8s (ID: 3961816482286168143)
 
-Apply complete! Resources: 86 added, 0 changed, 0 destroyed.
+Apply complete! Resources: 69 added, 0 changed, 0 destroyed.
 ```
 
 In 4-8 minutes, the Kubernetes cluster will be ready.
 
 ## Verify
 
-[Install kubectl](https://coreos.com/kubernetes/docs/latest/configure-kubectl.html) on your system. Use the generated `kubeconfig` credentials to access the Kubernetes cluster and list nodes.
+[Install kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) on your system. Obtain the generated cluster `kubeconfig` from module outputs (e.g. write to a local file).
 
 ```
-$ export KUBECONFIG=/home/user/.secrets/clusters/ramius/auth/kubeconfig
+resource "local_file" "kubeconfig-ramius" {
+  content  = module.ramius.kubeconfig-admin
+  filename = "/home/user/.kube/configs/ramius-config"
+}
+```
+
+List nodes in the cluster.
+
+```
+$ export KUBECONFIG=/home/user/.kube/configs/ramius-config
 $ kubectl get nodes
-NAME                  STATUS  ROLES              AGE  VERSION
-ramius-controller-0   Ready   controller,master  24m  v1.13.2
-ramius-worker-000001  Ready   node               25m  v1.13.2
-ramius-worker-000002  Ready   node               24m  v1.13.2
+NAME                  STATUS  ROLES   AGE  VERSION
+ramius-controller-0   Ready   <none>  24m  v1.18.2
+ramius-worker-000001  Ready   <none>  25m  v1.18.2
+ramius-worker-000002  Ready   <none>  24m  v1.18.2
 ```
 
 List the pods.
@@ -173,27 +158,20 @@ $ kubectl get pods --all-namespaces
 NAMESPACE     NAME                                        READY  STATUS    RESTARTS  AGE
 kube-system   coredns-7c6fbb4f4b-b6qzx                    1/1    Running   0         26m
 kube-system   coredns-7c6fbb4f4b-j2k3d                    1/1    Running   0         26m
-kube-system   flannel-bwf24                               2/2    Running   2         26m
-kube-system   flannel-ks5qb                               2/2    Running   0         26m
-kube-system   flannel-tq2wg                               2/2    Running   0         26m
-kube-system   kube-apiserver-hxgsx                        1/1    Running   3         26m
-kube-system   kube-controller-manager-5ff9cd7bb6-b942n    1/1    Running   0         26m
-kube-system   kube-controller-manager-5ff9cd7bb6-bbr6w    1/1    Running   0         26m
+kube-system   calico-node-1m5bf                           2/2    Running   0         26m
+kube-system   calico-node-7jmr1                           2/2    Running   0         26m
+kube-system   calico-node-bknc8                           2/2    Running   0         26m
+kube-system   kube-apiserver-ramius-controller-0          1/1    Running   0         26m
+kube-system   kube-controller-manager-ramius-controller-0 1/1    Running   0         26m
 kube-system   kube-proxy-j4vpq                            1/1    Running   0         26m
 kube-system   kube-proxy-jxr5d                            1/1    Running   0         26m
 kube-system   kube-proxy-lbdw5                            1/1    Running   0         26m
-kube-system   kube-scheduler-5f76d69686-s4fbx             1/1    Running   0         26m
-kube-system   kube-scheduler-5f76d69686-vgdgn             1/1    Running   0         26m
-kube-system   pod-checkpointer-cnqdg                      1/1    Running   0         26m
-kube-system   pod-checkpointer-cnqdg-ramius-controller-0  1/1    Running   0         25m
+kube-system   kube-scheduler-ramius-controller-0          1/1    Running   0         26m
 ```
 
 ## Going Further
 
 Learn about [maintenance](/topics/maintenance/) and [addons](/addons/overview/).
-
-!!! note
-    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -208,7 +186,6 @@ Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/azure/c
 | dns_zone | Azure DNS zone | "azure.example.com" |
 | dns_zone_group | Resource group where the Azure DNS zone resides | "global" |
 | ssh_authorized_key | SSH public key for user 'core' | "ssh-rsa AAAAB3NZ..." |
-| asset_dir | Path to a directory where generated assets should be placed (contains secrets) | "/home/user/.secrets/clusters/ramius" |
 
 !!! tip
     Regions are shown in [docs](https://azure.microsoft.com/en-us/global-infrastructure/regions/) or with `az account list-locations --output table`.
@@ -228,14 +205,14 @@ resource "azurerm_resource_group" "global" {
 
 # DNS zone for clusters
 resource "azurerm_dns_zone" "clusters" {
-  resource_group_name = "${azurerm_resource_group.global.name}"
+  resource_group_name = azurerm_resource_group.global.name
 
   name      = "azure.example.com"
   zone_type = "Public"
 }
 ```
 
-Reference the DNS zone with `"${azurerm_dns_zone.clusters.name}"` and its resource group with `"${azurerm_resource_group.global.name}"`.
+Reference the DNS zone with `azurerm_dns_zone.clusters.name` and its resource group with `"azurerm_resource_group.global.name`.
 
 !!! tip ""
     If you have an existing domain name with a zone file elsewhere, just delegate a subdomain that can be managed on Azure DNS (e.g. azure.mydomain.com) and [update nameservers](https://docs.microsoft.com/en-us/azure/dns/dns-delegate-domain-azure-dns).
@@ -246,17 +223,18 @@ Reference the DNS zone with `"${azurerm_dns_zone.clusters.name}"` and its resour
 |:-----|:------------|:--------|:--------|
 | controller_count | Number of controllers (i.e. masters) | 1 | 1 |
 | worker_count | Number of workers | 1 | 3 |
-| controller_type | Machine type for controllers | "Standard_DS1_v2" | See below |
-| worker_type | Machine type for workers | "Standard_F1" | See below |
-| os_image | Channel for a Container Linux derivative | coreos-stable | coreos-stable, coreos-beta, coreos-alpha |
-| disk_size | Size of the disk GB | "40" | "100" |
-| worker_priority | Set priority to Low to use reduced cost surplus capacity, with the tradeoff that instances can be deallocated at any time | Regular | Low |
-| controller_clc_snippets | Controller Container Linux Config snippets | [] | [example](/advanced/customization/#usage) |
-| worker_clc_snippets | Worker Container Linux Config snippets | [] | [example](/advanced/customization/#usage) |
+| controller_type | Machine type for controllers | "Standard_B2s" | See below |
+| worker_type | Machine type for workers | "Standard_DS1_v2" | See below |
+| os_image | Channel for a Container Linux derivative | "flatcar-stable" | coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta |
+| disk_size | Size of the disk in GB | 40 | 100 |
+| worker_priority | Set priority to Spot to use reduced cost surplus capacity, with the tradeoff that instances can be deallocated at any time | Regular | Spot |
+| controller_snippets | Controller Container Linux Config snippets | [] | [example](/advanced/customization/#usage) |
+| worker_snippets | Worker Container Linux Config snippets | [] | [example](/advanced/customization/#usage) |
+| networking | Choice of networking provider | "calico" | "flannel" or "calico" |
 | host_cidr | CIDR IPv4 range to assign to instances | "10.0.0.0/16" | "10.0.0.0/20" |
 | pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
 | service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
-| cluster_domain_suffix | FQDN suffix for Kubernetes services answered by coredns. | "cluster.local" | "k8s.example.com" |
+| worker_node_labels | List of initial worker node labels | [] | ["worker-pool=default"] |
 
 Check the list of valid [machine types](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/linux/) and their [specs](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/sizes-general). Use `az vm list-skus` to get the identifier.
 
@@ -264,8 +242,8 @@ Check the list of valid [machine types](https://azure.microsoft.com/en-us/pricin
     Unlike AWS and GCP, Azure requires its *virtual* networks to have non-overlapping IPv4 CIDRs (yeah, go figure). Instead of each cluster just using `10.0.0.0/16` for instances, each Azure cluster's `host_cidr` must be non-overlapping (e.g. 10.0.0.0/20 for the 1st cluster, 10.0.16.0/20 for the 2nd cluster, etc).
 
 !!! warning
-    Do not choose a `controller_type` smaller than `Standard_DS1_v2`. Smaller instances are not sufficient for running a controller.
+    Do not choose a `controller_type` smaller than `Standard_B2s`. Smaller instances are not sufficient for running a controller.
 
-#### Low Priority
+#### Spot Priority
 
-Add `worker_priority=Low` to use [Low Priority](https://docs.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-use-low-priority) workers that run on Azure's surplus capacity at lower cost, but with the tradeoff that they can be deallocated at random. Low priority VMs are Azure's analog to AWS spot instances or GCP premptible instances.
+Add `worker_priority=Spot` to use [Spot Priority](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/spot-vms) workers that run on Azure's surplus capacity at lower cost, but with the tradeoff that they can be deallocated at random. Spot priority VMs are Azure's analog to AWS spot instances or GCP premptible instances.

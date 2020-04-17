@@ -6,7 +6,7 @@ Nginx Ingress controller pods accept and demultiplex HTTP, HTTPS, TCP, or UDP tr
 
 On AWS, a network load balancer (NLB) distributes TCP traffic across two target groups (port 80 and 443) of worker nodes running an Ingress controller deployment. Security groups rules allow traffic to ports 80 and 443. Health checks ensure only workers with a healthy Ingress controller receive traffic.
 
-Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, default backend, and namespace.
+Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, and namespace.
 
 ```
 kubectl apply -R -f addons/nginx-ingress/aws
@@ -31,7 +31,7 @@ resource "google_dns_record_set" "some-application" {
   name    = "app.example.com."
   type    = "CNAME"
   ttl     = 300
-  rrdatas = ["${module.aws-tempest.ingress_dns_name}."]
+  rrdatas = ["${module.tempest.ingress_dns_name}."]
 }
 ```
 
@@ -39,7 +39,7 @@ resource "google_dns_record_set" "some-application" {
 
 On Azure, a load balancer distributes traffic across a backend address pool of worker nodes running an Ingress controller deployment. Security group rules allow traffic to ports 80 and 443. Health probes ensure only workers with a healthy Ingress controller receive traffic.
 
-Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, default backend, and namespace.
+Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, and namespace.
 
 ```
 kubectl apply -R -f addons/nginx-ingress/azure
@@ -64,7 +64,7 @@ resource "google_dns_record_set" "some-application" {
   name    = "app.example.com."
   type    = "A"
   ttl     = 300
-  rrdatas = ["${module.azure-ramius.ingress_static_ipv4}"]
+  rrdatas = [module.ramius.ingress_static_ipv4]
 }
 ```
 
@@ -74,7 +74,7 @@ On bare-metal, routing traffic to Ingress controller pods can be done in number 
 
 ### Equal-Cost Multi-Path
 
-Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, and default backend. The service should use a fixed ClusterIP (e.g. 10.3.0.12) in the Kubernetes service IPv4 CIDR range.
+Create the Ingress controller deployment, service, RBAC roles, and RBAC bindings. The service should use a fixed ClusterIP (e.g. 10.3.0.12) in the Kubernetes service IPv4 CIDR range.
 
 ```
 kubectl apply -R -f addons/nginx-ingress/bare-metal
@@ -101,9 +101,9 @@ resource "google_dns_record_set" "some-application" {
 
 ## Digital Ocean
 
-On Digital Ocean, DNS A and AAAA records (e.g. FQDN `nemo-workers.example.com`) resolve to each worker[^1] running an Ingress controller DaemonSet on host ports 80 and 443. Firewall rules allow IPv4 and IPv6 traffic to ports 80 and 443.
+On DigitalOcean, DNS A and AAAA records (e.g. FQDN `nemo-workers.example.com`) resolve to each worker[^1] running an Ingress controller DaemonSet on host ports 80 and 443. Firewall rules allow IPv4 and IPv6 traffic to ports 80 and 443.
 
-Create the Ingress controller daemonset, service, RBAC roles, RBAC bindings, default backend, and namespace.
+Create the Ingress controller daemonset, service, RBAC roles, RBAC bindings, and namespace.
 
 ```
 kubectl apply -R -f addons/nginx-ingress/digital-ocean
@@ -120,20 +120,20 @@ resource "google_dns_record_set" "some-application" {
   name    = "app.example.com."
   type    = "CNAME"
   ttl     = 300
-  rrdatas = ["${module.digital-ocean-nemo.workers_dns}."]
+  rrdatas = ["${module.nemo.workers_dns}."]
 }
 ```
 
 !!! note
     Hosting IPv6 apps is possible, but requires editing the nginx-ingress addon to use `hostNetwork: true`.
 
-[^1]: Digital Ocean does offer load balancers. We've opted not to use them to keep the Digital Ocean setup simple and cheap for developers.
+[^1]: DigitalOcean does offer load balancers. We've opted not to use them to keep the DigitalOcean cluster cheap for developers.
 
 ## Google Cloud
 
 On Google Cloud, a TCP Proxy load balancer distributes IPv4 and IPv6 TCP traffic across a backend service of worker nodes running an Ingress controller deployment. Firewall rules allow traffic to ports 80 and 443. Health check rules ensure only workers with a healthy Ingress controller receive traffic.
 
-Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, default backend, and namespace.
+Create the Ingress controller deployment, service, RBAC roles, RBAC bindings, and namespace.
 
 ```
 kubectl apply -R -f addons/nginx-ingress/google-cloud
@@ -158,7 +158,7 @@ resource "google_dns_record_set" "app-record-a" {
   name    = "app.example.com."
   type    = "A"
   ttl     = 300
-  rrdatas = ["${module.google-cloud-yavin.ingress_static_ipv4}"]
+  rrdatas = [module.yavin.ingress_static_ipv4]
 }
 
 resource "google_dns_record_set" "app-record-aaaa" {
@@ -169,6 +169,6 @@ resource "google_dns_record_set" "app-record-aaaa" {
   name    = "app.example.com."
   type    = "AAAA"
   ttl     = 300
-  rrdatas = ["${module.google-cloud-yavin.ingress_static_ipv6}"]
+  rrdatas = [module.yavin.ingress_static_ipv6]
 }
 ```

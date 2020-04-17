@@ -1,0 +1,19 @@
+# Allow Prometheus to scrape service endpoints
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '10249'
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    k8s-app: kube-proxy
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 10249
+      targetPort: 10249

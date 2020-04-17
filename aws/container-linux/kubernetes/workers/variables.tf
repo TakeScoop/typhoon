@@ -1,76 +1,82 @@
 variable "cluster_name" {
-  type        = "string"
+  type        = string
   description = "Name of the cluster the workers belong to"
 }
 
 variable "name" {
-  type        = "string"
+  type        = string
   description = "Unique name for the worker pool"
 }
 
 # AWS
 
 variable "vpc_id" {
-  type        = "string"
+  type        = string
   description = "Must be set to `vpc_id` output by cluster"
 }
 
 variable "subnet_ids" {
-  type        = "list"
+  type        = list(string)
   description = "Must be set to `subnet_ids` output by cluster"
 }
 
 variable "security_groups" {
-  type        = "list"
+  type        = list(string)
   description = "Must be set to `worker_security_groups` output by cluster"
 }
 
 # instances
 
-variable "count" {
-  type        = "string"
-  default     = "1"
+variable "worker_count" {
+  type        = number
   description = "Number of instances"
+  default     = 1
 }
 
 variable "instance_type" {
-  type        = "string"
-  default     = "t3.small"
+  type        = string
   description = "EC2 instance type"
+  default     = "t3.small"
 }
 
 variable "os_image" {
-  type        = "string"
-  default     = "coreos-stable"
-  description = "AMI channel for a Container Linux derivative (coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha)"
+  type        = string
+  description = "AMI channel for a Container Linux derivative (coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha, flatcar-edge)"
+  default     = "flatcar-stable"
 }
 
 variable "disk_size" {
-  type        = "string"
-  default     = "40"
+  type        = number
   description = "Size of the EBS volume in GB"
+  default     = 40
 }
 
 variable "disk_type" {
-  type        = "string"
-  default     = "gp2"
+  type        = string
   description = "Type of the EBS volume (e.g. standard, gp2, io1)"
+  default     = "gp2"
 }
 
 variable "disk_iops" {
-  type        = "string"
-  default     = "0"
+  type        = number
   description = "IOPS of the EBS volume (required for io1)"
+  default     = 0
 }
 
 variable "spot_price" {
-  type        = "string"
-  default     = ""
-  description = "Spot price in USD for autoscaling group spot instances. Leave as default empty string for autoscaling group to use on-demand instances. Note, switching in-place from spot to on-demand is not possible: https://github.com/terraform-providers/terraform-provider-aws/issues/4320"
+  type        = number
+  description = "Spot price in USD for worker instances or 0 to use on-demand instances"
+  default     = 0
 }
 
-variable "clc_snippets" {
-  type        = "list"
+variable "target_groups" {
+  type        = list(string)
+  description = "Additional target group ARNs to which instances should be added"
+  default     = []
+}
+
+variable "snippets" {
+  type        = list(string)
   description = "Container Linux Config snippets"
   default     = []
 }
@@ -78,36 +84,35 @@ variable "clc_snippets" {
 # configuration
 
 variable "kubeconfig" {
-  type        = "string"
+  type        = string
   description = "Must be set to `kubeconfig` output by cluster"
 }
 
 variable "service_cidr" {
+  type        = string
   description = <<EOD
 CIDR IPv4 range to assign Kubernetes services.
 The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for coredns.
 EOD
-
-  type    = "string"
-  default = "10.3.0.0/16"
+  default     = "10.3.0.0/16"
 }
 
 variable "cluster_domain_suffix" {
+  type        = string
   description = "Queries for domains with the suffix will be answered by coredns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
-  type        = "string"
   default     = "cluster.local"
 }
 
 variable "node_labels" {
-  description = "List of additional labels to add to worker nodes"
-  type        = "list"
+  type        = list(string)
+  description = "List of initial node labels"
   default     = []
 }
 
 # Scoop variables
 
 variable "ami" {
-  type        = "string"
+  type        = string
   description = "Custom AMI to use for launching workers (defaults to latest stable CoreOS)"
   default     = ""
 }

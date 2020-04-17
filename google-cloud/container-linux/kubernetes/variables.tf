@@ -1,77 +1,76 @@
 variable "cluster_name" {
-  type        = "string"
+  type        = string
   description = "Unique cluster name (prepended to dns_zone)"
 }
 
 # Google Cloud
 
 variable "region" {
-  type        = "string"
+  type        = string
   description = "Google Cloud Region (e.g. us-central1, see `gcloud compute regions list`)"
 }
 
 variable "dns_zone" {
-  type        = "string"
+  type        = string
   description = "Google Cloud DNS Zone (e.g. google-cloud.example.com)"
 }
 
 variable "dns_zone_name" {
-  type        = "string"
+  type        = string
   description = "Google Cloud DNS Zone name (e.g. example-zone)"
 }
 
 # instances
 
 variable "controller_count" {
-  type        = "string"
-  default     = "1"
+  type        = number
   description = "Number of controllers (i.e. masters)"
+  default     = 1
 }
 
 variable "worker_count" {
-  type        = "string"
-  default     = "1"
+  type        = number
   description = "Number of workers"
+  default     = 1
 }
 
 variable "controller_type" {
-  type        = "string"
-  default     = "n1-standard-1"
+  type        = string
   description = "Machine type for controllers (see `gcloud compute machine-types list`)"
+  default     = "n1-standard-1"
 }
 
 variable "worker_type" {
-  type        = "string"
-  default     = "n1-standard-1"
+  type        = string
   description = "Machine type for controllers (see `gcloud compute machine-types list`)"
+  default     = "n1-standard-1"
 }
 
 variable "os_image" {
-  type        = "string"
-  default     = "coreos-stable"
-  description = "Container Linux image for compute instances (e.g. coreos-stable)"
+  type        = string
+  description = "Container Linux image for compute instances (e.g. coreos-stable, custom-image)"
 }
 
 variable "disk_size" {
-  type        = "string"
-  default     = "40"
+  type        = number
   description = "Size of the disk in GB"
+  default     = 40
 }
 
 variable "worker_preemptible" {
-  type        = "string"
-  default     = "false"
+  type        = bool
   description = "If enabled, Compute Engine will terminate workers randomly within 24 hours"
+  default     = false
 }
 
-variable "controller_clc_snippets" {
-  type        = "list"
+variable "controller_snippets" {
+  type        = list(string)
   description = "Controller Container Linux Config snippets"
   default     = []
 }
 
-variable "worker_clc_snippets" {
-  type        = "list"
+variable "worker_snippets" {
+  type        = list(string)
   description = "Worker Container Linux Config snippets"
   default     = []
 }
@@ -79,45 +78,61 @@ variable "worker_clc_snippets" {
 # configuration
 
 variable "ssh_authorized_key" {
-  type        = "string"
+  type        = string
   description = "SSH public key for user 'core'"
 }
 
-variable "asset_dir" {
-  description = "Path to a directory where generated assets should be placed (contains secrets)"
-  type        = "string"
-}
-
 variable "networking" {
+  type        = string
   description = "Choice of networking provider (flannel or calico)"
-  type        = "string"
   default     = "calico"
 }
 
 variable "pod_cidr" {
+  type        = string
   description = "CIDR IPv4 range to assign Kubernetes pods"
-  type        = "string"
   default     = "10.2.0.0/16"
 }
 
 variable "service_cidr" {
+  type        = string
   description = <<EOD
 CIDR IPv4 range to assign Kubernetes services.
 The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for coredns.
 EOD
+  default     = "10.3.0.0/16"
+}
 
-  type    = "string"
-  default = "10.3.0.0/16"
+
+variable "enable_reporting" {
+  type        = bool
+  description = "Enable usage or analytics reporting to upstreams (Calico)"
+  default     = false
+}
+
+variable "enable_aggregation" {
+  type        = bool
+  description = "Enable the Kubernetes Aggregation Layer (defaults to false)"
+  default     = false
+}
+
+variable "worker_node_labels" {
+  type        = list(string)
+  description = "List of initial worker node labels"
+  default     = []
+}
+
+# unofficial, undocumented, unsupported
+
+variable "asset_dir" {
+  type        = string
+  description = "Absolute path to a directory where generated assets should be placed (contains secrets)"
+  default     = ""
 }
 
 variable "cluster_domain_suffix" {
+  type        = string
   description = "Queries for domains with the suffix will be answered by coredns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
-  type        = "string"
   default     = "cluster.local"
 }
 
-variable "enable_reporting" {
-  type        = "string"
-  description = "Enable usage or analytics reporting to upstreams (Calico)"
-  default     = "false"
-}

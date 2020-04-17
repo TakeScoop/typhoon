@@ -23,44 +23,90 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: grafana/grafana:5.4.2
+          image: docker.io/grafana/grafana:6.7.2
           env:
-            - name: GF_SERVER_HTTP_PORT
-              value: "8080"
-            - name: GF_AUTH_BASIC_ENABLED
-              value: "false"
-            - name: GF_AUTH_DISABLE_LOGIN_FORM
-              value: "true"
-            - name: GF_AUTH_ANONYMOUS_ENABLED
-              value: "true"
-            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-              value: Viewer
-            - name: GF_ANALYTICS_REPORTING_ENABLED
-              value: "false"
+            - name: GF_PATHS_CONFIG
+              value: "/etc/grafana/custom.ini"
           ports:
             - name: http
               containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 8080
+            initialDelaySeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 10
           resources:
             requests:
-              memory: 100Mi
               cpu: 100m
+              memory: 100Mi
             limits:
-              memory: 200Mi
               cpu: 200m
+              memory: 200Mi
           volumeMounts:
+            - name: config
+              mountPath: /etc/grafana
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
-            - name: dashboard-providers
+            - name: providers
               mountPath: /etc/grafana/provisioning/dashboards
-            - name: dashboards
-              mountPath: /var/lib/grafana/dashboards
+            - name: dashboards-etcd
+              mountPath: /etc/grafana/dashboards/etcd
+            - name: dashboards-node-exporter
+              mountPath: /etc/grafana/dashboards/node-exporter
+            - name: dashboards-prom
+              mountPath: /etc/grafana/dashboards/prom
+            - name: dashboards-k8s
+              mountPath: /etc/grafana/dashboards/k8s
+            - name: dashboards-k8s-nodes
+              mountPath: /etc/grafana/dashboards/k8s-nodes
+            - name: dashboards-k8s-resources-1
+              mountPath: /etc/grafana/dashboards/k8s-resources-1
+            - name: dashboards-k8s-resources-2
+              mountPath: /etc/grafana/dashboards/k8s-resources-2
+            - name: dashboards-coredns
+              mountPath: /etc/grafana/dashboards/coredns
+            - name: dashboards-nginx-ingress
+              mountPath: /etc/grafana/dashboards/nginx-ingress
       volumes:
+        - name: config
+          configMap:
+            name: grafana-config
         - name: datasources
           configMap:
             name: grafana-datasources
-        - name: dashboard-providers
+        - name: providers
           configMap:
-            name: grafana-dashboard-providers
-        - name: dashboards
+            name: grafana-providers
+        - name: dashboards-etcd
           configMap:
-            name: grafana-dashboards
+            name: grafana-dashboards-etcd
+        - name: dashboards-node-exporter
+          configMap:
+            name: grafana-dashboards-node-exporter
+        - name: dashboards-prom
+          configMap:
+            name: grafana-dashboards-prom
+        - name: dashboards-k8s
+          configMap:
+            name: grafana-dashboards-k8s
+        - name: dashboards-k8s-nodes
+          configMap:
+            name: grafana-dashboards-k8s-nodes
+        - name: dashboards-k8s-resources-1
+          configMap:
+            name: grafana-dashboards-k8s-resources-1
+        - name: dashboards-k8s-resources-2
+          configMap:
+            name: grafana-dashboards-k8s-resources-2
+        - name: dashboards-coredns
+          configMap:
+            name: grafana-dashboards-coredns
+        - name: dashboards-nginx-ingress
+          configMap:
+            name: grafana-dashboards-nginx-ingress
+

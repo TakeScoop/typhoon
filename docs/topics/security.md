@@ -12,7 +12,7 @@ Typhoon aims to be minimal and secure. We're running it ourselves after all.
 * Workloads run on worker nodes only, unless they tolerate the master taint
 * Kubernetes [Network Policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) and Calico [NetworkPolicy](https://docs.projectcalico.org/latest/reference/calicoctl/resources/networkpolicy) support [^1]
 
-[^1]: Requires `networking = "calico"`. Calico is the default on AWS, bare-metal, and Google Cloud. Azure and Digital Ocean are limited to `networking = "flannel"`.
+[^1]: Requires `networking = "calico"`. Calico is the default on all platforms (AWS, Azure, bare-metal, DigitalOcean, and Google Cloud).
 
 **Hosts**
 
@@ -40,11 +40,14 @@ Typhoon limits exposure to many security threats, but it is not a silver bullet.
 * Do not give untrusted users a shell behind your firewall
 * Define network policies for your namespaces
 
-## OpenPGP Signing
+## Container Images
 
-Typhoon uses upstream container images and binaries. We do not distribute artifacts of our own, except where required for system container images ([etcd](https://quay.io/repository/poseidon/etcd), [kubelet](https://quay.io/repository/poseidon/kubelet), [bootkube](https://quay.io/repository/poseidon/bootkube)) for Fedora Atomic only.
+Typhoon uses upstream container images (where possible) and upstream binaries.
 
-If you find artifacts claiming to be from Typhoon, please send a note.
+!!! note
+    Kubernetes releases `kubelet` as a binary for distros to package, either as a DEB/RPM on traditional distros or as a container image for container-optimized operating systems.
+
+Typhoon [packages](https://github.com/poseidon/kubelet) the upstream Kubelet and its dependencies as a [container image](https://quay.io/repository/poseidon/kubelet) for use in Typhoon. The upstream Kubelet binary is checksummed and packaged directly. Quay automated builds provide verifiability and confidence in image contents.
 
 ## Disclosures
 

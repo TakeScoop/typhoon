@@ -1,18 +1,18 @@
 # Bare-Metal
 
-In this tutorial, we'll network boot and provision a Kubernetes v1.13.2 cluster on bare-metal with Container Linux.
+In this tutorial, we'll network boot and provision a Kubernetes v1.18.2 cluster on bare-metal with CoreOS Container Linux or Flatcar Linux.
 
-First, we'll deploy a [Matchbox](https://github.com/coreos/matchbox) service and setup a network boot environment. Then, we'll declare a Kubernetes cluster using the Typhoon Terraform module and power on machines. On PXE boot, machines will install Container Linux to disk, reboot into the disk install, and provision themselves as Kubernetes controllers or workers via Ignition.
+First, we'll deploy a [Matchbox](https://github.com/poseidon/matchbox) service and setup a network boot environment. Then, we'll declare a Kubernetes cluster using the Typhoon Terraform module and power on machines. On PXE boot, machines will install Container Linux to disk, reboot into the disk install, and provision themselves as Kubernetes controllers or workers via Ignition.
 
-Controllers are provisioned to run an `etcd-member` peer and a `kubelet` service. Workers run just a `kubelet` service. A one-time [bootkube](https://github.com/kubernetes-incubator/bootkube) bootstrap schedules the `apiserver`, `scheduler`, `controller-manager`, and `coredns` on controllers and schedules `kube-proxy` and `calico` (or `flannel`) on every node. A generated `kubeconfig` provides `kubectl` access to the cluster.
+Controller hosts are provisioned to run an `etcd-member` peer and a `kubelet` service. Worker hosts run a `kubelet` service. Controller nodes run `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, and `coredns` while `kube-proxy` and `calico` (or `flannel`) run on every node. A generated `kubeconfig` provides `kubectl` access to the cluster.
 
 ## Requirements
 
 * Machines with 2GB RAM, 30GB disk, PXE-enabled NIC, IPMI
-* PXE-enabled [network boot](https://coreos.com/matchbox/docs/latest/network-setup.html) environment
+* PXE-enabled [network boot](https://coreos.com/matchbox/docs/latest/network-setup.html) environment (with HTTPS support)
 * Matchbox v0.6+ deployment with API enabled
 * Matchbox credentials `client.crt`, `client.key`, `ca.crt`
-* Terraform v0.11.x, [terraform-provider-matchbox](https://github.com/coreos/terraform-provider-matchbox), and [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) installed locally
+* Terraform v0.12.6+, [terraform-provider-matchbox](https://github.com/poseidon/terraform-provider-matchbox), and [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) installed locally
 
 ## Machines
 
@@ -27,7 +27,7 @@ Configure each machine to boot from the disk through IPMI or the BIOS menu.
 ```
 ipmitool -H node1 -U USER -P PASS chassis bootdev disk options=persistent
 ```
- 
+
 During provisioning, you'll explicitly set the boot device to `pxe` for the next boot only. Machines will install (overwrite) the operating system to disk on PXE boot and reboot into the disk install.
 
 !!! tip ""
@@ -82,7 +82,7 @@ $ openssl s_client -connect matchbox.example.com:8081 \
 
 ## PXE Environment
 
-Create a iPXE-enabled network boot environment. Configure PXE clients to chainload [iPXE](http://ipxe.org/cmd) and instruct iPXE clients to chainload from your Matchbox service's `/boot.ipxe` endpoint.
+Create an iPXE-enabled network boot environment. Configure PXE clients to chainload [iPXE](http://ipxe.org/cmd) firmware compiled to support [HTTPS downloads](https://ipxe.org/crypto). Instruct iPXE clients to chainload from your Matchbox service's `/boot.ipxe` endpoint.
 
 For networks already supporting iPXE clients, you can add a `default.ipxe` config.
 
@@ -93,8 +93,6 @@ chain http://matchbox.foo:8080/boot.ipxe
 
 For networks with Ubiquiti Routers, you can [configure the router](/topics/hardware/#ubiquiti) itself to chainload machines to iPXE and Matchbox.
 
-For a small lab, you may wish to checkout the [quay.io/coreos/dnsmasq](https://quay.io/repository/coreos/dnsmasq) container image and [copy-paste examples](https://github.com/coreos/matchbox/blob/master/Documentation/network-setup.md#coreosdnsmasq).
-
 Read about the [many ways](https://coreos.com/matchbox/docs/latest/network-setup.html) to setup a compliant iPXE-enabled network. There is quite a bit of flexibility:
 
 * Continue using existing DHCP, TFTP, or DNS services
@@ -104,29 +102,32 @@ Read about the [many ways](https://coreos.com/matchbox/docs/latest/network-setup
 !!! note ""
     TFTP chainloading to modern boot firmware, like iPXE, avoids issues with old NICs and allows faster transfer protocols like HTTP to be used.
 
+!!! warning
+    Compile iPXE from [source](https://github.com/ipxe/ipxe) with support for [HTTPS downloads](https://ipxe.org/crypto). iPXE's pre-built firmware binaries do not enable this. If you cannot enable HTTPS downloads, set `download_protocol = "http"` (discouraged).
+
 ## Terraform Setup
 
-Install [Terraform](https://www.terraform.io/downloads.html) v0.11.x on your system.
+Install [Terraform](https://www.terraform.io/downloads.html) v0.12.6+ on your system.
 
 ```sh
 $ terraform version
-Terraform v0.11.12
+Terraform v0.12.21
 ```
 
-Add the [terraform-provider-matchbox](https://github.com/coreos/terraform-provider-matchbox) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
+Add the [terraform-provider-matchbox](https://github.com/poseidon/terraform-provider-matchbox) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-matchbox/releases/download/v0.2.2/terraform-provider-matchbox-v0.2.2-linux-amd64.tar.gz
-tar xzf terraform-provider-matchbox-v0.2.2-linux-amd64.tar.gz
-mv terraform-provider-matchbox-v0.2.2-linux-amd64/terraform-provider-matchbox ~/.terraform.d/plugins/terraform-provider-matchbox_v0.2.2
+wget https://github.com/poseidon/terraform-provider-matchbox/releases/download/v0.3.0/terraform-provider-matchbox-v0.3.0-linux-amd64.tar.gz
+tar xzf terraform-provider-matchbox-v0.3.0-linux-amd64.tar.gz
+mv terraform-provider-matchbox-v0.3.0-linux-amd64/terraform-provider-matchbox ~/.terraform.d/plugins/terraform-provider-matchbox_v0.3.0
 ```
 
-Add the [terraform-provider-ct](https://github.com/coreos/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
+Add the [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
 
 ```sh
-wget https://github.com/coreos/terraform-provider-ct/releases/download/v0.3.0/terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.3.0-linux-amd64.tar.gz
-mv terraform-provider-ct-v0.3.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.3.0
+wget https://github.com/poseidon/terraform-provider-ct/releases/download/v0.5.0/terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
+tar xzf terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
+mv terraform-provider-ct-v0.5.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.5.0
 ```
 
 Read [concepts](/architecture/concepts/) to learn about Terraform, modules, and organizing resources. Change to your infrastructure repository (e.g. `infra`).
@@ -141,35 +142,15 @@ Configure the Matchbox provider to use your Matchbox API endpoint and client cer
 
 ```tf
 provider "matchbox" {
-  version = "0.2.2"
+  version     = "0.3.0"
   endpoint    = "matchbox.example.com:8081"
-  client_cert = "${file("~/.config/matchbox/client.crt")}"
-  client_key  = "${file("~/.config/matchbox/client.key")}"
-  ca          = "${file("~/.config/matchbox/ca.crt")}"
+  client_cert = file("~/.config/matchbox/client.crt")
+  client_key  = file("~/.config/matchbox/client.key")
+  ca          = file("~/.config/matchbox/ca.crt")
 }
 
 provider "ct" {
-  version = "0.3.0"
-}
-
-provider "local" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "null" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "template" {
-  version = "~> 1.0"
-  alias = "default"
-}
-
-provider "tls" {
-  version = "~> 1.0"
-  alias = "default"
+  version = "0.5.0"
 }
 ```
 
@@ -178,43 +159,40 @@ provider "tls" {
 Define a Kubernetes cluster using the module `bare-metal/container-linux/kubernetes`.
 
 ```tf
-module "bare-metal-mercury" {
-  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.13.2"
-  
-  providers = {
-    local = "local.default"
-    null = "null.default"
-    template = "template.default"
-    tls = "tls.default"
-  }
-  
+module "mercury" {
+  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.18.2"
+
   # bare-metal
   cluster_name            = "mercury"
   matchbox_http_endpoint  = "http://matchbox.example.com"
-  os_channel              = "coreos-stable"
-  os_version              = "1632.3.0"
+  os_channel              = "flatcar-stable"
+  os_version              = "2345.3.1"
 
   # configuration
   k8s_domain_name    = "node1.example.com"
   ssh_authorized_key = "ssh-rsa AAAAB3Nz..."
-  asset_dir          = "/home/user/.secrets/clusters/mercury"
 
   # machines
-  controller_names   = ["node1"]
-  controller_macs    = ["52:54:00:a1:9c:ae"]
-  controller_domains = ["node1.example.com"]
-  worker_names = [
-    "node2",
-    "node3",
+  controllers = [{
+    name   = "node1"
+    mac    = "52:54:00:a1:9c:ae"
+    domain = "node1.example.com"
+  }]
+  workers = [
+    {
+      name   = "node2",
+      mac    = "52:54:00:b2:2f:86"
+      domain = "node2.example.com"
+    },
+    {
+      name   = "node3",
+      mac    = "52:54:00:c3:61:77"
+      domain = "node3.example.com"
+    }
   ]
-  worker_macs = [
-    "52:54:00:b2:2f:86",
-    "52:54:00:c3:61:77",
-  ]
-  worker_domains = [
-    "node2.example.com",
-    "node3.example.com",
-  ]
+
+  # set to http only if you cannot chainload to iPXE firmware with https support
+  # download_protocol = "http"
 }
 ```
 
@@ -222,7 +200,7 @@ Reference the [variables docs](#variables) or the [variables.tf](https://github.
 
 ## ssh-agent
 
-Initial bootstrapping requires `bootkube.service` be started on one controller node. Terraform uses `ssh-agent` to automate this step. Add your SSH private key to `ssh-agent`.
+Initial bootstrapping requires `bootstrap.service` be started on one controller node. Terraform uses `ssh-agent` to automate this step. Add your SSH private key to `ssh-agent`.
 
 ```sh
 ssh-add ~/.ssh/id_rsa
@@ -244,14 +222,12 @@ $ terraform plan
 Plan: 55 to add, 0 to change, 0 to destroy.
 ```
 
-Apply the changes. Terraform will generate bootkube assets to `asset_dir` and create Matchbox profiles (e.g. controller, worker) and matching rules via the Matchbox API.
+Apply the changes. Terraform will generate bootstrap assets and create Matchbox profiles (e.g. controller, worker) and matching rules via the Matchbox API.
 
 ```sh
 $ terraform apply
-module.bare-metal-mercury.null_resource.copy-kubeconfig.0: Provisioning with 'file'...
-module.bare-metal-mercury.null_resource.copy-etcd-secrets.0: Provisioning with 'file'...
-module.bare-metal-mercury.null_resource.copy-kubeconfig.0: Still creating... (10s elapsed)
-module.bare-metal-mercury.null_resource.copy-etcd-secrets.0: Still creating... (10s elapsed)
+module.mercury.null_resource.copy-controller-secrets.0: Still creating... (10s elapsed)
+module.mercury.null_resource.copy-worker-secrets.0: Still creating... (10s elapsed)
 ...
 ```
 
@@ -273,14 +249,14 @@ Machines will network boot, install Container Linux to disk, reboot into the dis
 
 ### Bootstrap
 
-Wait for the `bootkube-start` step to finish bootstrapping the Kubernetes control plane. This may take 5-15 minutes depending on your network.
+Wait for the `bootstrap` step to finish bootstrapping the Kubernetes control plane. This may take 5-15 minutes depending on your network.
 
 ```
-module.bare-metal-mercury.null_resource.bootkube-start: Still creating... (6m10s elapsed)
-module.bare-metal-mercury.null_resource.bootkube-start: Still creating... (6m20s elapsed)
-module.bare-metal-mercury.null_resource.bootkube-start: Still creating... (6m30s elapsed)
-module.bare-metal-mercury.null_resource.bootkube-start: Still creating... (6m40s elapsed)
-module.bare-metal-mercury.null_resource.bootkube-start: Creation complete (ID: 5441741360626669024)
+module.mercury.null_resource.bootstrap: Still creating... (6m10s elapsed)
+module.mercury.null_resource.bootstrap: Still creating... (6m20s elapsed)
+module.mercury.null_resource.bootstrap: Still creating... (6m30s elapsed)
+module.mercury.null_resource.bootstrap: Still creating... (6m40s elapsed)
+module.mercury.null_resource.bootstrap: Creation complete (ID: 5441741360626669024)
 
 Apply complete! Resources: 55 added, 0 changed, 0 destroyed.
 ```
@@ -288,9 +264,9 @@ Apply complete! Resources: 55 added, 0 changed, 0 destroyed.
 To watch the install to disk (until machines reboot from disk), SSH to port 2222.
 
 ```
-# before v1.13.2
+# before v1.10.1
 $ ssh debug@node1.example.com
-# after v1.13.2
+# after v1.10.1
 $ ssh -p 2222 core@node1.example.com
 ```
 
@@ -298,26 +274,34 @@ To watch the bootstrap process in detail, SSH to the first controller and journa
 
 ```
 $ ssh core@node1.example.com
-$ journalctl -f -u bootkube
-bootkube[5]:         Pod Status:        pod-checkpointer        Running
-bootkube[5]:         Pod Status:          kube-apiserver        Running
-bootkube[5]:         Pod Status:          kube-scheduler        Running
-bootkube[5]:         Pod Status: kube-controller-manager        Running
-bootkube[5]: All self-hosted control plane components successfully started
-bootkube[5]: Tearing down temporary bootstrap control plane...
+$ journalctl -f -u bootstrap
+rkt[1750]: The connection to the server cluster.example.com:6443 was refused - did you specify the right host or port?
+rkt[1750]: Waiting for static pod control plane
+...
+rkt[1750]: serviceaccount/calico-node unchanged
+systemd[1]: Started Kubernetes control plane.
 ```
 
 ## Verify
 
-[Install kubectl](https://coreos.com/kubernetes/docs/latest/configure-kubectl.html) on your system. Use the generated `kubeconfig` credentials to access the Kubernetes cluster and list nodes.
+[Install kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) on your system. Obtain the generated cluster `kubeconfig` from module outputs (e.g. write to a local file).
 
 ```
-$ export KUBECONFIG=/home/user/.secrets/clusters/mercury/auth/kubeconfig
+resource "local_file" "kubeconfig-mercury" {
+  content  = module.mercury.kubeconfig-admin
+  filename = "/home/user/.kube/configs/mercury-config"
+}
+```
+
+List nodes in the cluster.
+
+```
+$ export KUBECONFIG=/home/user/.kube/configs/mercury-config
 $ kubectl get nodes
-NAME                STATUS  ROLES              AGE  VERSION
-node1.example.com   Ready   controller,master  10m  v1.13.2
-node2.example.com   Ready   node               10m  v1.13.2
-node3.example.com   Ready   node               10m  v1.13.2
+NAME                STATUS  ROLES   AGE  VERSION
+node1.example.com   Ready   <none>  10m  v1.18.2
+node2.example.com   Ready   <none>  10m  v1.18.2
+node3.example.com   Ready   <none>  10m  v1.18.2
 ```
 
 List the pods.
@@ -330,24 +314,17 @@ kube-system   calico-node-gnjrm                          2/2       Running   0  
 kube-system   calico-node-llbgt                          2/2       Running   0          11m
 kube-system   coredns-1187388186-dj3pd                   1/1       Running   0          11m
 kube-system   coredns-1187388186-mx9rt                   1/1       Running   0          11m
-kube-system   kube-apiserver-7336w                       1/1       Running   0          11m
-kube-system   kube-controller-manager-3271970485-b9chx   1/1       Running   0          11m
-kube-system   kube-controller-manager-3271970485-v30js   1/1       Running   1          11m
+kube-system   kube-apiserver-node1.example.com           1/1       Running   0          11m
+kube-system   kube-controller-node1.example.com          1/1       Running   1          11m
 kube-system   kube-proxy-50sd4                           1/1       Running   0          11m
 kube-system   kube-proxy-bczhp                           1/1       Running   0          11m
 kube-system   kube-proxy-mp2fw                           1/1       Running   0          11m
-kube-system   kube-scheduler-3895335239-fd3l7            1/1       Running   1          11m
-kube-system   kube-scheduler-3895335239-hfjv0            1/1       Running   0          11m
-kube-system   pod-checkpointer-wf65d                     1/1       Running   0          11m
-kube-system   pod-checkpointer-wf65d-node1.example.com   1/1       Running   0          11m
+kube-system   kube-scheduler-node1.example.com           1/1       Running   0          11m
 ```
 
 ## Going Further
 
 Learn about [maintenance](/topics/maintenance/) and [addons](/addons/overview/).
-
-!!! note
-    On Container Linux clusters, install the `CLUO` addon to coordinate reboots and drains when nodes auto-update. Otherwise, updates may not be applied until the next reboot.
 
 ## Variables
 
@@ -357,32 +334,29 @@ Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/bare-me
 
 | Name | Description | Example |
 |:-----|:------------|:--------|
-| cluster_name | Unique cluster name | mercury |
-| matchbox_http_endpoint | Matchbox HTTP read-only endpoint | http://matchbox.example.com:port |
-| os_channel | Channel for a Container Linux derivative | coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha |
-| os_version | Version for a Container Linux derivative to PXE and install | 1632.3.0 |
+| cluster_name | Unique cluster name | "mercury" |
+| matchbox_http_endpoint | Matchbox HTTP read-only endpoint | "http://matchbox.example.com:port" |
+| os_channel | Channel for a Container Linux derivative | coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha, flatcar-edge |
+| os_version | Version for a Container Linux derivative to PXE and install | "2345.3.1" |
 | k8s_domain_name | FQDN resolving to the controller(s) nodes. Workers and kubectl will communicate with this endpoint | "myk8s.example.com" |
 | ssh_authorized_key | SSH public key for user 'core' | "ssh-rsa AAAAB3Nz..." |
-| asset_dir | Path to a directory where generated assets should be placed (contains secrets) | "/home/user/.secrets/clusters/mercury" |
-| controller_names | Ordered list of controller short names | ["node1"] |
-| controller_macs | Ordered list of controller identifying MAC addresses | ["52:54:00:a1:9c:ae"] |
-| controller_domains | Ordered list of controller FQDNs | ["node1.example.com"] |
-| worker_names | Ordered list of worker short names | ["node2", "node3"] |
-| worker_macs | Ordered list of worker identifying MAC addresses | ["52:54:00:b2:2f:86", "52:54:00:c3:61:77"] |
-| worker_domains | Ordered list of worker FQDNs | ["node2.example.com", "node3.example.com"] |
+| controllers | List of controller machine detail objects (unique name, identifying MAC address, FQDN) | `[{name="node1", mac="52:54:00:a1:9c:ae", domain="node1.example.com"}]` |
+| workers | List of worker machine detail objects (unique name, identifying MAC address, FQDN) | `[{name="node2", mac="52:54:00:b2:2f:86", domain="node2.example.com"}, {name="node3", mac="52:54:00:c3:61:77", domain="node3.example.com"}]` |
 
 ### Optional
 
 | Name | Description | Default | Example |
 |:-----|:------------|:--------|:--------|
+| download_protocol | Protocol iPXE uses to download the kernel and initrd. iPXE must be compiled with [crypto](https://ipxe.org/crypto) support for https. Unused if cached_install is true | "https" | "http" |
 | cached_install | PXE boot and install from the Matchbox `/assets` cache. Admin MUST have downloaded Container Linux or Flatcar images into the cache | false | true |
 | install_disk | Disk device where Container Linux should be installed | "/dev/sda" | "/dev/sdb" |
 | networking | Choice of networking provider | "calico" | "calico" or "flannel" |
-| network_mtu | CNI interface MTU (calico-only) | 1480 | - | 
-| clc_snippets | Map from machine names to lists of Container Linux Config snippets | {} | [example](/advanced/customization/#usage) |
-| network_ip_autodetection_method | Method to detect host IPv4 address (calico-only) | first-found | can-reach=10.0.0.1 |
+| network_mtu | CNI interface MTU (calico-only) | 1480 | - |
+| snippets | Map from machine names to lists of Container Linux Config snippets | {} | [examples](/advanced/customization/) |
+| network_ip_autodetection_method | Method to detect host IPv4 address (calico-only) | "first-found" | "can-reach=10.0.0.1" |
 | pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
 | service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
-| cluster_domain_suffix | FQDN suffix for Kubernetes services answered by coredns. | "cluster.local" | "k8s.example.com" |
-| kernel_args | Additional kernel args to provide at PXE boot | [] | "kvm-intel.nested=1" |
+| kernel_args | Additional kernel args to provide at PXE boot | [] | ["kvm-intel.nested=1"] |
+| worker_node_labels | Map from worker name to list of initial node labels | {} | {"node2" = ["role=special"]} |
+| worker_node_taints | Map from worker name to list of initial node taints | {} | {"node2" = ["role=special:NoSchedule"]} |
 

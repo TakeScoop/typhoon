@@ -1,14 +1,14 @@
 # Network Load Balancer DNS Record
 resource "aws_route53_record" "apiserver" {
-  zone_id = "${var.dns_zone_id}"
+  zone_id = var.dns_zone_id
 
-  name = "${format("%s.%s.", var.cluster_name, var.dns_zone)}"
+  name = format("%s.%s.", var.cluster_name, var.dns_zone)
   type = "A"
 
   # AWS recommends their special "alias" records for NLBs
   alias {
-    name                   = "${aws_lb.nlb.dns_name}"
-    zone_id                = "${aws_lb.nlb.zone_id}"
+    name                   = aws_lb.nlb.dns_name
+    zone_id                = aws_lb.nlb.zone_id
     evaluate_target_health = true
   }
 }
@@ -19,36 +19,36 @@ resource "aws_lb" "nlb" {
   load_balancer_type = "network"
   internal           = true
 
-  subnets = ["${aws_subnet.private.*.id}"]
+  subnets = aws_subnet.private.*.id
 
   enable_cross_zone_load_balancing = true
 }
 
 # Forward TCP apiserver traffic to controllers
 resource "aws_lb_listener" "apiserver-https" {
-  load_balancer_arn = "${aws_lb.nlb.arn}"
+  load_balancer_arn = aws_lb.nlb.arn
   protocol          = "TCP"
-  port              = "${var.apiserver_port}"
+  port              = 6443
 
   default_action {
     type             = "forward"
-    target_group_arn = "${aws_lb_target_group.controllers.arn}"
+    target_group_arn = aws_lb_target_group.controllers.arn
   }
 }
 
 # Target group of controllers
 resource "aws_lb_target_group" "controllers" {
   name        = "${var.cluster_name}-controllers"
-  vpc_id      = "${aws_vpc.network.id}"
+  vpc_id      = aws_vpc.network.id
   target_type = "ip"
 
   protocol = "TCP"
-  port     = "${var.apiserver_port}"
+  port     = 6443
 
   # TCP health check for apiserver
   health_check {
     protocol = "TCP"
-    port     = "${var.apiserver_port}"
+    port     = 6443
 
     # NLBs required to use same healthy and unhealthy thresholds
     healthy_threshold   = 3
@@ -61,9 +61,10 @@ resource "aws_lb_target_group" "controllers" {
 
 # Attach controller instances to apiserver NLB
 resource "aws_lb_target_group_attachment" "controllers" {
-  count = "${var.controller_count}"
+  count = var.controller_count
 
-  target_group_arn = "${aws_lb_target_group.controllers.arn}"
-  target_id        = "${element(aws_instance.controllers.*.private_ip, count.index)}"
-  port             = "${var.apiserver_port}"
+  target_group_arn = aws_lb_target_group.controllers.arn
+  target_id        = aws_instance.controllers.*.private_ip[count.index]
+  port             = 6443
 }
+

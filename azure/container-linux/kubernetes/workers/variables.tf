@@ -1,63 +1,63 @@
 variable "name" {
-  type        = "string"
+  type        = string
   description = "Unique name for the worker pool"
 }
 
 # Azure
 
 variable "region" {
-  type        = "string"
+  type        = string
   description = "Must be set to the Azure Region of cluster"
 }
 
 variable "resource_group_name" {
-  type        = "string"
+  type        = string
   description = "Must be set to the resource group name of cluster"
 }
 
 variable "subnet_id" {
-  type        = "string"
+  type        = string
   description = "Must be set to the `worker_subnet_id` output by cluster"
 }
 
 variable "security_group_id" {
-  type        = "string"
+  type        = string
   description = "Must be set to the `worker_security_group_id` output by cluster"
 }
 
 variable "backend_address_pool_id" {
-  type        = "string"
+  type        = string
   description = "Must be set to the `worker_backend_address_pool_id` output by cluster"
 }
 
 # instances
 
-variable "count" {
-  type        = "string"
-  default     = "1"
+variable "worker_count" {
+  type        = number
   description = "Number of instances"
+  default     = 1
 }
 
 variable "vm_type" {
-  type        = "string"
-  default     = "Standard_F1"
+  type        = string
   description = "Machine type for instances (see `az vm list-skus --location centralus`)"
+  default     = "Standard_DS1_v2"
 }
 
 variable "os_image" {
-  type        = "string"
-  default     = "coreos-stable"
-  description = "Channel for a Container Linux derivative (coreos-stable, coreos-beta, coreos-alpha)"
+  type        = string
+  description = "Channel for a Container Linux derivative (flatcar-stable, flatcar-beta, coreos-stable, coreos-beta, coreos-alpha)"
+  default     = "flatcar-stable"
 }
 
 variable "priority" {
-  type        = "string"
+  type        = string
+  description = "Set priority to Spot to use reduced cost surplus capacity, with the tradeoff that instances can be evicted at any time."
   default     = "Regular"
-  description = "Set priority to Low to use reduced cost surplus capacity, with the tradeoff that instances can be evicted at any time."
 }
 
-variable "clc_snippets" {
-  type        = "list"
+variable "snippets" {
+  type        = list(string)
   description = "Container Linux Config snippets"
   default     = []
 }
@@ -65,27 +65,35 @@ variable "clc_snippets" {
 # configuration
 
 variable "kubeconfig" {
-  type        = "string"
+  type        = string
   description = "Must be set to `kubeconfig` output by cluster"
 }
 
 variable "ssh_authorized_key" {
-  type        = "string"
+  type        = string
   description = "SSH public key for user 'core'"
 }
 
 variable "service_cidr" {
+  type        = string
   description = <<EOD
 CIDR IPv4 range to assign Kubernetes services.
 The 1st IP will be reserved for kube_apiserver, the 10th IP will be reserved for coredns.
 EOD
-
-  type    = "string"
-  default = "10.3.0.0/16"
+  default     = "10.3.0.0/16"
 }
+
+variable "node_labels" {
+  type        = list(string)
+  description = "List of initial node labels"
+  default     = []
+}
+
+# unofficial, undocumented, unsupported
 
 variable "cluster_domain_suffix" {
   description = "Queries for domains with the suffix will be answered by coredns. Default is cluster.local (e.g. foo.default.svc.cluster.local) "
-  type        = "string"
+  type        = string
   default     = "cluster.local"
 }
+

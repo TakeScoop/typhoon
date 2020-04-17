@@ -1,105 +1,69 @@
-# Secure copy etcd TLS assets to controllers.
-resource "null_resource" "copy-controller-secrets" {
-  depends_on = [
-    "aws_autoscaling_group.bastion"
+locals {
+  # format assets for distribution
+  assets_bundle = [
+    # header with the unpack location
+    for key, value in module.bootstrap.assets_dist :
+    format("##### %s\n%s", key, value)
   ]
-
-  count = "${var.controller_count}"
-
-  connection {
-    type    = "ssh"
-
-    host    = "${element(aws_instance.controllers.*.private_ip, count.index)}"
-    user    = "${var.ssh_user}"
-
-    bastion_host = "${aws_lb.bastion.dns_name}"
-    bastion_user = "${var.ssh_user}"
-
-    timeout = "15m"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_ca_cert}"
-    destination = "$HOME/etcd-client-ca.crt"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_client_cert}"
-    destination = "$HOME/etcd-client.crt"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_client_key}"
-    destination = "$HOME/etcd-client.key"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_server_cert}"
-    destination = "$HOME/etcd-server.crt"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_server_key}"
-    destination = "$HOME/etcd-server.key"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_peer_cert}"
-    destination = "$HOME/etcd-peer.crt"
-  }
-
-  provisioner "file" {
-    content     = "${module.bootkube.etcd_peer_key}"
-    destination = "$HOME/etcd-peer.key"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "sudo mkdir -p /etc/ssl/etcd/etcd",
-      "sudo mv etcd-client* /etc/ssl/etcd/",
-      "sudo cp /etc/ssl/etcd/etcd-client-ca.crt /etc/ssl/etcd/etcd/server-ca.crt",
-      "sudo mv etcd-server.crt /etc/ssl/etcd/etcd/server.crt",
-      "sudo mv etcd-server.key /etc/ssl/etcd/etcd/server.key",
-      "sudo cp /etc/ssl/etcd/etcd-client-ca.crt /etc/ssl/etcd/etcd/peer-ca.crt",
-      "sudo mv etcd-peer.crt /etc/ssl/etcd/etcd/peer.crt",
-      "sudo mv etcd-peer.key /etc/ssl/etcd/etcd/peer.key",
-      "sudo chown -R etcd:etcd /etc/ssl/etcd",
-      "sudo chmod -R 500 /etc/ssl/etcd",
-    ]
-  }
 }
 
-# Secure copy bootkube assets to ONE controller and start bootkube to perform
-# one-time self-hosted cluster bootstrapping.
-resource "null_resource" "bootkube-start" {
+# Secure copy assets to controllers.
+resource "null_resource" "copy-controller-secrets" {
+  count = var.controller_count
+
   depends_on = [
-    "module.bootkube",
-    "module.workers",
-    "aws_route53_record.apiserver",
-    "null_resource.copy-controller-secrets",
+    aws_autoscaling_group.bastion,
+    module.bootstrap,
   ]
 
   connection {
-    type    = "ssh"
+    type = "ssh"
 
-    host    = "${aws_instance.controllers.0.private_ip}"
-    user    = "${var.ssh_user}"
+    host = aws_instance.controllers.*.private_ip[count.index]
+    user = var.ssh_user
 
-    bastion_host = "${aws_lb.bastion.dns_name}"
-    bastion_user = "${var.ssh_user}"
+    bastion_host = aws_lb.bastion.dns_name
+    bastion_user = var.ssh_user
 
     timeout = "15m"
   }
 
   provisioner "file" {
-    source      = "${var.asset_dir}"
+    content     = join("\n", local.assets_bundle)
     destination = "$HOME/assets"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "sudo mv $HOME/assets /opt/bootkube",
-      "sudo systemctl start bootkube",
+      "sudo /opt/bootstrap/layout",
     ]
   }
 }
+
+# Connect to a controller to perform one-time cluster bootstrap.
+resource "null_resource" "bootstrap" {
+  depends_on = [
+    null_resource.copy-controller-secrets,
+    module.workers,
+    aws_route53_record.apiserver,
+  ]
+
+  connection {
+    type = "ssh"
+
+    host = aws_instance.controllers[0].private_ip
+    user = var.ssh_user
+
+    bastion_host = aws_lb.bastion.dns_name
+    bastion_user = var.ssh_user
+
+    timeout = "15m"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo systemctl start bootstrap",
+    ]
+  }
+}
+

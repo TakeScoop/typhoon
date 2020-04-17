@@ -6,23 +6,25 @@ resource "aws_security_group" "controller" {
   name        = "${var.cluster_name}-controller"
   description = "${var.cluster_name} controller security group"
 
-  vpc_id = "${aws_vpc.network.id}"
+  vpc_id = aws_vpc.network.id
 
-  tags = "${map("Name", "${var.cluster_name}-controller")}"
+  tags = {
+    "Name" = "${var.cluster_name}-controller"
+  }
 }
 
 resource "aws_security_group_rule" "controller-ssh" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 22
   to_port                  = 22
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-etcd" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -33,17 +35,17 @@ resource "aws_security_group_rule" "controller-etcd" {
 
 # Allow Prometheus to scrape etcd metrics
 resource "aws_security_group_rule" "controller-etcd-metrics" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 2381
   to_port                  = 2381
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-etcd-metrics-self" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -53,59 +55,96 @@ resource "aws_security_group_rule" "controller-etcd-metrics-self" {
 }
 
 resource "aws_security_group_rule" "controller-apiserver" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type        = "ingress"
   protocol    = "tcp"
-  from_port   = "${var.apiserver_port}"
-  to_port     = "${var.apiserver_port}"
+  from_port   = 6443
+  to_port     = 6443
   cidr_blocks = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "controller-flannel" {
-  security_group_id = "${aws_security_group.controller.id}"
+# Allow Prometheus to scrape kube-proxy
+resource "aws_security_group_rule" "kube-proxy-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10249
+  to_port                  = 10249
+  source_security_group_id = aws_security_group.worker.id
+}
+
+# Allow Prometheus to scrape kube-scheduler
+resource "aws_security_group_rule" "controller-scheduler-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10251
+  to_port                  = 10251
+  source_security_group_id = aws_security_group.worker.id
+}
+
+# Allow Prometheus to scrape kube-controller-manager
+resource "aws_security_group_rule" "controller-manager-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10252
+  to_port                  = 10252
+  source_security_group_id = aws_security_group.worker.id
+}
+
+resource "aws_security_group_rule" "controller-vxlan" {
+  count = var.networking == "flannel" ? 1 : 0
+
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "udp"
-  from_port                = 8472
-  to_port                  = 8472
-  source_security_group_id = "${aws_security_group.worker.id}"
+  from_port                = 4789
+  to_port                  = 4789
+  source_security_group_id = aws_security_group.worker.id
 }
 
-resource "aws_security_group_rule" "controller-flannel-self" {
-  security_group_id = "${aws_security_group.controller.id}"
+resource "aws_security_group_rule" "controller-vxlan-self" {
+  count = var.networking == "flannel" ? 1 : 0
+
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = "udp"
-  from_port = 8472
-  to_port   = 8472
+  from_port = 4789
+  to_port   = 4789
   self      = true
 }
 
 # Allow Prometheus to scrape node-exporter daemonset
 resource "aws_security_group_rule" "controller-node-exporter" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 9100
   to_port                  = 9100
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 # Allow apiserver to access kubelets for exec, log, port-forward
 resource "aws_security_group_rule" "controller-kubelet" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 10250
   to_port                  = 10250
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-kubelet-self" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -115,17 +154,17 @@ resource "aws_security_group_rule" "controller-kubelet-self" {
 }
 
 resource "aws_security_group_rule" "controller-bgp" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 179
   to_port                  = 179
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-bgp-self" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -135,17 +174,17 @@ resource "aws_security_group_rule" "controller-bgp-self" {
 }
 
 resource "aws_security_group_rule" "controller-ipip" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = 4
   from_port                = 0
   to_port                  = 0
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-ipip-self" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = 4
@@ -155,17 +194,17 @@ resource "aws_security_group_rule" "controller-ipip-self" {
 }
 
 resource "aws_security_group_rule" "controller-ipip-legacy" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = 94
   from_port                = 0
   to_port                  = 0
-  source_security_group_id = "${aws_security_group.worker.id}"
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-ipip-legacy-self" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type      = "ingress"
   protocol  = 94
@@ -175,7 +214,7 @@ resource "aws_security_group_rule" "controller-ipip-legacy-self" {
 }
 
 resource "aws_security_group_rule" "controller-egress" {
-  security_group_id = "${aws_security_group.controller.id}"
+  security_group_id = aws_security_group.controller.id
 
   type             = "egress"
   protocol         = "-1"
@@ -191,23 +230,25 @@ resource "aws_security_group" "worker" {
   name        = "${var.cluster_name}-worker"
   description = "${var.cluster_name} worker security group"
 
-  vpc_id = "${aws_vpc.network.id}"
+  vpc_id = aws_vpc.network.id
 
-  tags = "${map("Name", "${var.cluster_name}-worker")}"
+  tags = {
+    "Name" = "${var.cluster_name}-worker"
+  }
 }
 
 resource "aws_security_group_rule" "worker-ssh-bastion" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 22
   to_port                  = 22
-  source_security_group_id = "${aws_security_group.bastion_external.id}"
+  source_security_group_id = aws_security_group.bastion_external.id
 }
 
 resource "aws_security_group_rule" "worker-ssh-self" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -217,7 +258,7 @@ resource "aws_security_group_rule" "worker-ssh-self" {
 }
 
 resource "aws_security_group_rule" "worker-http" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type        = "ingress"
   protocol    = "tcp"
@@ -227,7 +268,7 @@ resource "aws_security_group_rule" "worker-http" {
 }
 
 resource "aws_security_group_rule" "worker-https" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type        = "ingress"
   protocol    = "tcp"
@@ -236,29 +277,33 @@ resource "aws_security_group_rule" "worker-https" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "worker-flannel" {
-  security_group_id = "${aws_security_group.worker.id}"
+resource "aws_security_group_rule" "worker-vxlan" {
+  count = var.networking == "flannel" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
 
   type                     = "ingress"
   protocol                 = "udp"
-  from_port                = 8472
-  to_port                  = 8472
-  source_security_group_id = "${aws_security_group.controller.id}"
+  from_port                = 4789
+  to_port                  = 4789
+  source_security_group_id = aws_security_group.controller.id
 }
 
-resource "aws_security_group_rule" "worker-flannel-self" {
-  security_group_id = "${aws_security_group.worker.id}"
+resource "aws_security_group_rule" "worker-vxlan-self" {
+  count = var.networking == "flannel" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = "udp"
-  from_port = 8472
-  to_port   = 8472
+  from_port = 4789
+  to_port   = 4789
   self      = true
 }
 
 # Allow Prometheus to scrape node-exporter daemonset
 resource "aws_security_group_rule" "worker-node-exporter" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -267,30 +312,31 @@ resource "aws_security_group_rule" "worker-node-exporter" {
   self      = true
 }
 
-resource "aws_security_group_rule" "ingress-health" {
-  security_group_id = "${aws_security_group.worker.id}"
+# Allow Prometheus to scrape kube-proxy
+resource "aws_security_group_rule" "worker-kube-proxy" {
+  security_group_id = aws_security_group.worker.id
 
-  type        = "ingress"
-  protocol    = "tcp"
-  from_port   = 10254
-  to_port     = 10254
-  cidr_blocks = ["0.0.0.0/0"]
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 10249
+  to_port   = 10249
+  self      = true
 }
 
 # Allow apiserver to access kubelets for exec, log, port-forward
 resource "aws_security_group_rule" "worker-kubelet" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 10250
   to_port                  = 10250
-  source_security_group_id = "${aws_security_group.controller.id}"
+  source_security_group_id = aws_security_group.controller.id
 }
 
 # Allow Prometheus to scrape kubelet metrics
 resource "aws_security_group_rule" "worker-kubelet-self" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -299,18 +345,28 @@ resource "aws_security_group_rule" "worker-kubelet-self" {
   self      = true
 }
 
+resource "aws_security_group_rule" "ingress-health" {
+  security_group_id = aws_security_group.worker.id
+
+  type        = "ingress"
+  protocol    = "tcp"
+  from_port   = 10254
+  to_port     = 10254
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
 resource "aws_security_group_rule" "worker-bgp" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type                     = "ingress"
   protocol                 = "tcp"
   from_port                = 179
   to_port                  = 179
-  source_security_group_id = "${aws_security_group.controller.id}"
+  source_security_group_id = aws_security_group.controller.id
 }
 
 resource "aws_security_group_rule" "worker-bgp-self" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = "tcp"
@@ -320,17 +376,17 @@ resource "aws_security_group_rule" "worker-bgp-self" {
 }
 
 resource "aws_security_group_rule" "worker-ipip" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type                     = "ingress"
   protocol                 = 4
   from_port                = 0
   to_port                  = 0
-  source_security_group_id = "${aws_security_group.controller.id}"
+  source_security_group_id = aws_security_group.controller.id
 }
 
 resource "aws_security_group_rule" "worker-ipip-self" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = 4
@@ -340,17 +396,17 @@ resource "aws_security_group_rule" "worker-ipip-self" {
 }
 
 resource "aws_security_group_rule" "worker-ipip-legacy" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type                     = "ingress"
   protocol                 = 94
   from_port                = 0
   to_port                  = 0
-  source_security_group_id = "${aws_security_group.controller.id}"
+  source_security_group_id = aws_security_group.controller.id
 }
 
 resource "aws_security_group_rule" "worker-ipip-legacy-self" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type      = "ingress"
   protocol  = 94
@@ -360,7 +416,7 @@ resource "aws_security_group_rule" "worker-ipip-legacy-self" {
 }
 
 resource "aws_security_group_rule" "worker-egress" {
-  security_group_id = "${aws_security_group.worker.id}"
+  security_group_id = aws_security_group.worker.id
 
   type             = "egress"
   protocol         = "-1"
@@ -369,3 +425,4 @@ resource "aws_security_group_rule" "worker-egress" {
   cidr_blocks      = ["0.0.0.0/0"]
   ipv6_cidr_blocks = ["::/0"]
 }
+
