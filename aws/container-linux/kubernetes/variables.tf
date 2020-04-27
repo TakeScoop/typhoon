@@ -97,6 +97,11 @@ variable "bastion_clc_snippets" {
 
 # configuration
 
+variable "ssh_authorized_key" {
+  type        = string
+  description = "SSH public key for var.ssh_user"
+}
+
 variable "networking" {
   type        = string
   description = "Choice of networking provider (calico or flannel)"
