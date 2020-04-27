@@ -189,7 +189,7 @@ variable "bastion_count" {
 }
 
 variable "ami" {
-  type        = map(string)
+  type        = string
   description = "Custom AMI to use to launch instances. When no value is set for a role, the latest stable CoreOS AMI is used."
   default     = ""
 }
