@@ -22,6 +22,6 @@ module "workers" {
   node_labels           = var.worker_node_labels
 
   # scoop
-  ami = lookup(var.amis, "worker", "")
+  ami = var.ami
 }
 

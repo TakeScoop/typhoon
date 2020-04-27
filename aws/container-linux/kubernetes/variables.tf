@@ -188,10 +188,10 @@ variable "bastion_count" {
   description = "Number of bastion hosts to run"
 }
 
-variable "amis" {
-  type        = map(string)
-  description = "Static AMIs to use for different cluster roles. When no value is set for a role, the latest stable CoreOS AMI is used"
-  default     = { "" = "" }
+variable "ami" {
+  type        = string
+  description = "Custom AMI to use to launch instances. When no value is set for a role, the latest stable CoreOS AMI is used."
+  default     = ""
 }
 
 variable "ssh_user" {

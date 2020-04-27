@@ -35,7 +35,7 @@ resource "aws_autoscaling_group" "bastion" {
 }
 
 resource "aws_launch_configuration" "bastion" {
-  image_id      = lookup(var.amis, "bastion", data.aws_ami.coreos.image_id)
+  image_id      = coalesce(var.ami, data.aws_ami.coreos.image_id)
   instance_type = var.bastion_type
 
   user_data = data.ct_config.bastion_ign.rendered
