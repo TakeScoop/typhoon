@@ -24,7 +24,7 @@ resource "aws_instance" "controllers" {
 
   instance_type = var.controller_type
 
-  ami                  = lookup(var.amis, "controller", local.ami_id)
+  ami                  = coalesce(var.ami, local.ami_id)
   user_data            = data.ct_config.controller-ignitions.*.rendered[count.index]
   iam_instance_profile = aws_iam_instance_profile.controller.id
 
