@@ -93,9 +93,19 @@ output "private_route_tables" {
   description = "ID of the private route table that can be used to add additional private routes"
 }
 
+output "private_route_tables_map" {
+  value       = aws_route_table.private 
+  description = "Map of private route table resource IDs to aws_route_table objects, suitable for use in for_each"
+}
+
 output "public_route_tables" {
   value       = aws_route_table.public.*.id
   description = "IDs of the public route tables"
+}
+
+output "public_route_tables_map" {
+  value       = aws_route_table.public 
+  description = "Map of public route table resource IDs to aws_route_table objects, suitable for use in for_each"
 }
 
 output "depends_id" {
