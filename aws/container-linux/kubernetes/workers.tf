@@ -22,6 +22,7 @@ module "workers" {
   node_labels           = var.worker_node_labels
 
   # scoop
-  ami = var.ami
+  ami                    = var.ami
+  ignition_config_bucket = aws_s3_bucket.ignition_configs.id
 }
 

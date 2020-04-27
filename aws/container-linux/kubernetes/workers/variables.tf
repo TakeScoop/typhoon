@@ -116,3 +116,8 @@ variable "ami" {
   description = "Custom AMI to use for launching workers (defaults to latest stable CoreOS)"
   default     = ""
 }
+
+variable "ignition_config_bucket" {
+  type        = "string"
+  description = "The name of S3 bucket that stores ignition configs for bastion, controllers and workers"
+}

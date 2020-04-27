@@ -1,3 +1,16 @@
+locals {
+  user_data_worker = {
+    ignition = {
+      version = "2.2.0"
+      config = {
+        replace = {
+          source = "s3://${var.ignition_config_bucket}/${aws_s3_bucket_object.worker-ignition.id}"
+        }
+      }
+    }
+  }
+}
+
 # Workers AutoScaling Group
 resource "aws_autoscaling_group" "workers" {
   name = "${var.name}-worker ${aws_launch_configuration.worker.name}"
@@ -54,7 +67,7 @@ resource "aws_launch_configuration" "worker" {
   spot_price        = var.spot_price > 0 ? var.spot_price : null
   enable_monitoring = false
 
-  user_data = data.ct_config.worker-ignition.rendered
+  user_data = jsonencode(local.user_data_worker)
 
   # storage
   root_block_device {
@@ -77,6 +90,12 @@ resource "aws_launch_configuration" "worker" {
   }
 }
 
+resource "aws_s3_bucket_object" "worker-ignition" {
+  bucket  = var.ignition_config_bucket
+  key     = "worker.json"
+  content = data.ct_config.worker-ignition.rendered
+}
+
 # Worker Ignition config
 data "ct_config" "worker-ignition" {
   content      = data.template_file.worker-config.rendered
@@ -97,13 +116,27 @@ data "template_file" "worker-config" {
   }
 }
 
-resource "aws_iam_role_policy" "instance_read_ec2" {
-  name   = "instance-read-ec2"
+resource "aws_iam_role_policy" "worker_read_ignition_configs" {
+  name   = "read-ignition-configs"
   role   = aws_iam_role.worker.id
-  policy = data.aws_iam_policy_document.read_ec2.json
+  policy = data.aws_iam_policy_document.worker_read_ignition_configs.json
 }
 
-data "aws_iam_policy_document" "read_ec2" {
+data "aws_iam_policy_document" "worker_read_ignition_configs" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::${var.ignition_config_bucket}/${aws_s3_bucket_object.worker-ignition.id}"]
+  }
+}
+
+resource "aws_iam_role_policy" "worker_instance_read_ec2" {
+  name   = "instance-read-ec2"
+  role   = aws_iam_role.worker.id
+  policy = data.aws_iam_policy_document.worker_instance_read_ec2.json
+}
+
+data "aws_iam_policy_document" "worker_instance_read_ec2" {
   statement {
     actions   = ["ec2:Describe*"]
     resources = ["*"]

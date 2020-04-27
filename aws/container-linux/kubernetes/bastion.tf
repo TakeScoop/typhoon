@@ -1,3 +1,16 @@
+locals {
+  user_data_bastion = {
+    ignition = {
+      version = "2.2.0"
+      config = {
+        replace = {
+          source = "s3://${aws_s3_bucket.ignition_configs.id}/${aws_s3_bucket_object.bastion_config.id}"
+        }
+      }
+    }
+  }
+}
+
 resource "aws_autoscaling_group" "bastion" {
   name = "${var.cluster_name}-bastion ${aws_launch_configuration.bastion.name}"
 
@@ -38,17 +51,26 @@ resource "aws_launch_configuration" "bastion" {
   image_id      = coalesce(var.ami, data.aws_ami.coreos.image_id)
   instance_type = var.bastion_type
 
-  user_data = data.ct_config.bastion_ign.rendered
+  user_data = jsonencode(local.user_data_bastion)
 
   # network
   security_groups = [
     aws_security_group.bastion_external.id
   ]
 
+  # iam
+  iam_instance_profile = aws_iam_instance_profile.bastion.name
+
   lifecycle {
     // Override the default destroy and replace update behavior
     create_before_destroy = true
   }
+}
+
+resource "aws_s3_bucket_object" "bastion_config" {
+  bucket  = aws_s3_bucket.ignition_configs.id
+  key     = "bastion.json"
+  content = data.ct_config.bastion_ign.rendered
 }
 
 data "template_file" "bastion_config" {
@@ -163,4 +185,52 @@ resource "aws_route53_record" "bastion" {
     zone_id                = aws_lb.bastion.zone_id
     evaluate_target_health = false
   }
+}
+
+resource "aws_iam_role_policy" "bastion_read_ignition_config" {
+  name   = "read-ignition-configs"
+  role   = aws_iam_role.bastion.id
+  policy = data.aws_iam_policy_document.bastion_read_ignition_config.json
+}
+
+data "aws_iam_policy_document" "bastion_read_ignition_config" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.ignition_configs.arn}/${aws_s3_bucket_object.bastion_config.id}"]
+  }
+}
+
+resource "aws_iam_role_policy" "bastion_instance_read_ec2" {
+  name   = "instance-read-ec2"
+  role   = aws_iam_role.bastion.id
+  policy = "${data.aws_iam_policy_document.bastion_instance_read_ec2.json}"
+}
+
+data "aws_iam_policy_document" "bastion_instance_read_ec2" {
+  statement {
+    actions   = ["ec2:Describe*"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "bastion_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "bastion" {
+  name               = "${var.cluster_name}-bastion"
+  assume_role_policy = data.aws_iam_policy_document.bastion_assume_role.json
+}
+
+resource "aws_iam_instance_profile" "bastion" {
+  name = "${var.cluster_name}-bastion"
+  role = aws_iam_role.bastion.id
 }

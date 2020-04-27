@@ -25,8 +25,20 @@ resource "aws_instance" "controllers" {
   instance_type = var.controller_type
 
   ami                  = coalesce(var.ami, local.ami_id)
-  user_data            = data.ct_config.controller-ignitions.*.rendered[count.index]
-  iam_instance_profile = aws_iam_instance_profile.controller.id
+  iam_instance_profile = aws_iam_instance_profile.controller.name
+
+  user_data = <<EOF
+{
+  "ignition": {
+    "version": "2.2.0",
+    "config": {
+      "replace": {
+        "source": "s3://${aws_s3_bucket.ignition_configs.id}/${aws_s3_bucket_object.controller-ignitions.*.id[count.index]}"
+      }
+    }
+  }
+}
+EOF
 
   # storage
   root_block_device {
@@ -49,6 +61,13 @@ resource "aws_instance" "controllers" {
       user_data,
     ]
   }
+}
+
+resource "aws_s3_bucket_object" "controller-ignitions" {
+  count   = var.controller_count
+  bucket  = aws_s3_bucket.ignition_configs.id
+  key     = "controllers/${count.index}.json"
+  content = data.ct_config.controller-ignitions.*.rendered[count.index]
 }
 
 # Controller Ignition configs
@@ -89,20 +108,34 @@ data "template_file" "etcds" {
   }
 }
 
-resource "aws_iam_role_policy" "instance_read_ec2" {
-  name   = "instance-read-ec2"
+resource "aws_iam_role_policy" "controller_read_ignition_configs" {
+  name   = "read-ignition-configs"
   role   = aws_iam_role.controller.id
-  policy = data.aws_iam_policy_document.read_ec2.json
+  policy = data.aws_iam_policy_document.controller_read_ignition_configs.json
 }
 
-data "aws_iam_policy_document" "read_ec2" {
+data "aws_iam_policy_document" "controller_read_ignition_configs" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = formatlist("${aws_s3_bucket.ignition_configs.arn}/%s", aws_s3_bucket_object.controller-ignitions.*.id)
+  }
+}
+
+resource "aws_iam_role_policy" "controller_instance_read_ec2" {
+  name   = "instance-read-ec2"
+  role   = aws_iam_role.controller.id
+  policy = data.aws_iam_policy_document.controller_instance_read_ec2.json
+}
+
+data "aws_iam_policy_document" "controller_instance_read_ec2" {
   statement {
     actions   = ["ec2:Describe*"]
     resources = ["*"]
   }
 }
 
-data "aws_iam_policy_document" "assume_role" {
+data "aws_iam_policy_document" "controller_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -115,7 +148,7 @@ data "aws_iam_policy_document" "assume_role" {
 
 resource "aws_iam_role" "controller" {
   name               = "${var.cluster_name}-controller"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.controller_assume_role.json
 }
 
 resource "aws_iam_instance_profile" "controller" {
