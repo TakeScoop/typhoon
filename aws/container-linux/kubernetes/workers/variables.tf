@@ -118,6 +118,6 @@ variable "ami" {
 }
 
 variable "ignition_config_bucket" {
-  type        = "string"
+  type        = string
   description = "The name of S3 bucket that stores ignition configs for bastion, controllers and workers"
 }
