@@ -204,7 +204,7 @@ data "aws_iam_policy_document" "bastion_read_ignition_config" {
 resource "aws_iam_role_policy" "bastion_instance_read_ec2" {
   name   = "instance-read-ec2"
   role   = aws_iam_role.bastion.id
-  policy = "${data.aws_iam_policy_document.bastion_instance_read_ec2.json}"
+  policy = data.aws_iam_policy_document.bastion_instance_read_ec2.json
 }
 
 data "aws_iam_policy_document" "bastion_instance_read_ec2" {
