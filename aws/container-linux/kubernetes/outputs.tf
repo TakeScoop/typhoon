@@ -90,12 +90,12 @@ output "nat_ips" {
 
 output "private_route_tables" {
   value       = aws_route_table.private.*.id
-  description = "ID of the private route table that can be used to add additional private routes"
+  description = "IDs of the private route tables that can be used to add additional private routes"
 }
 
-output "private_route_tables_map" {
-  value       = aws_route_table.private 
-  description = "Map of private route table resource IDs to aws_route_table objects, suitable for use in for_each"
+output "private_route_tables_count" {
+  value       = length(aws_route_table.private)
+  description = "Number of private route tables that are created"
 }
 
 output "public_route_tables" {
@@ -103,9 +103,9 @@ output "public_route_tables" {
   description = "IDs of the public route tables"
 }
 
-output "public_route_tables_map" {
-  value       = aws_route_table.public 
-  description = "Map of public route table resource IDs to aws_route_table objects, suitable for use in for_each"
+output "public_route_tables_count" {
+  value       = length(aws_route_table.public)
+  description = "Number of public route tables that are created"
 }
 
 output "depends_id" {
