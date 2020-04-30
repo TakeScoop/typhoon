@@ -97,9 +97,9 @@ variable "bastion_clc_snippets" {
 
 # configuration
 
-variable "ssh_authorized_key" {
+variable "ssh_private_key" {
   type        = string
-  description = "SSH public key for var.ssh_user"
+  description = "SSH private key to use with provisioners"
 }
 
 variable "networking" {
