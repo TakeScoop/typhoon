@@ -49,7 +49,7 @@ EOF
   }
 
   # network
-  subnet_id = aws_subnet.private.*.id[count.index]
+  subnet_id = element(aws_subnet.private.*.id, count.index)
   vpc_security_group_ids = [
     aws_security_group.controller.id,
     aws_security_group.bastion_internal.id
