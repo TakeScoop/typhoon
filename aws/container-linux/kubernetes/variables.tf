@@ -199,6 +199,11 @@ variable "ssh_user" {
   description = "Username for provisioning via SSH"
 }
 
+variable "ssh_private_key" {
+  type        = string
+  description = "SSH private key to use with provisioners"
+}
+
 variable "subnet_tags_private" {
   type        = map(string)
   description = "Tags to apply to private subnets"

@@ -19,11 +19,13 @@ resource "null_resource" "copy-controller-secrets" {
   connection {
     type = "ssh"
 
-    host = aws_instance.controllers.*.private_ip[count.index]
-    user = var.ssh_user
+    host        = aws_instance.controllers.*.private_ip[count.index]
+    user        = var.ssh_user
+    private_key = var.ssh_private_key
 
-    bastion_host = aws_lb.bastion.dns_name
-    bastion_user = var.ssh_user
+    bastion_host        = aws_lb.bastion.dns_name
+    bastion_user        = var.ssh_user
+    bastion_private_key = var.ssh_private_key
 
     timeout = "15m"
   }
@@ -51,11 +53,14 @@ resource "null_resource" "bootstrap" {
   connection {
     type = "ssh"
 
-    host = aws_instance.controllers[0].private_ip
-    user = var.ssh_user
+    host        = aws_instance.controllers[0].private_ip
+    user        = var.ssh_user
+    private_key = var.ssh_private_key
 
-    bastion_host = aws_lb.bastion.dns_name
-    bastion_user = var.ssh_user
+    bastion_host        = aws_lb.bastion.dns_name
+    bastion_user        = var.ssh_user
+    bastion_private_key = var.ssh_private_key
+
 
     timeout = "15m"
   }
