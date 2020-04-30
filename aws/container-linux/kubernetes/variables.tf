@@ -97,11 +97,6 @@ variable "bastion_clc_snippets" {
 
 # configuration
 
-variable "ssh_private_key" {
-  type        = string
-  description = "SSH private key to use with provisioners"
-}
-
 variable "networking" {
   type        = string
   description = "Choice of networking provider (calico or flannel)"
@@ -202,6 +197,11 @@ variable "ami" {
 variable "ssh_user" {
   type        = string
   description = "Username for provisioning via SSH"
+}
+
+variable "ssh_private_key" {
+  type        = string
+  description = "SSH private key to use with provisioners"
 }
 
 variable "subnet_tags_private" {
