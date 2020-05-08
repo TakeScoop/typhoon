@@ -70,6 +70,7 @@ systemd:
           --authorization-mode=Webhook \
           --cgroup-driver=$${KUBELET_CGROUP_DRIVER} \
           --client-ca-file=/etc/kubernetes/ca.crt \
+          --cloud-provider=aws \
           --cluster_dns=${cluster_dns_service_ip} \
           --cluster_domain=${cluster_domain_suffix} \
           --cni-conf-dir=/etc/kubernetes/cni/net.d \
