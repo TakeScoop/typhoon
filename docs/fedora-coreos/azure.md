@@ -1,6 +1,6 @@
 # Azure
 
-In this tutorial, we'll create a Kubernetes v1.18.2 cluster on Azure with Fedora CoreOS.
+In this tutorial, we'll create a Kubernetes v1.18.8 cluster on Azure with Fedora CoreOS.
 
 We'll declare a Kubernetes cluster using the Typhoon Terraform module. Then apply the changes to create a resource group, virtual network, subnets, security groups, controller availability set, worker scale set, load balancer, and TLS assets.
 
@@ -10,23 +10,15 @@ Controller hosts are provisioned to run an `etcd-member` peer and a `kubelet` se
 
 * Azure account
 * Azure DNS Zone (registered Domain Name or delegated subdomain)
-* Terraform v0.12.6+ and [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) installed locally
+* Terraform v0.13.0+
 
 ## Terraform Setup
 
-Install [Terraform](https://www.terraform.io/downloads.html) v0.12.6+ on your system.
+Install [Terraform](https://www.terraform.io/downloads.html) v0.13.0+ on your system.
 
 ```sh
 $ terraform version
-Terraform v0.12.21
-```
-
-Add the [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
-
-```sh
-wget https://github.com/poseidon/terraform-provider-ct/releases/download/v0.5.0/terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
-mv terraform-provider-ct-v0.5.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.5.0
+Terraform v0.13.0
 ```
 
 Read [concepts](/architecture/concepts/) to learn about Terraform, modules, and organizing resources. Change to your infrastructure repository (e.g. `infra`).
@@ -47,11 +39,22 @@ Configure the Azure provider in a `providers.tf` file.
 
 ```tf
 provider "azurerm" {
-  version = "2.5.0"
+  features {}
 }
 
-provider "ct" {
-  version = "0.5.0"
+provider "ct" {}
+
+terraform {
+  required_providers {
+    ct = {
+      source  = "poseidon/ct"
+      version = "0.6.1"
+    }
+    azurerm = {
+      source = "hashicorp/azurerm"
+      version = "2.23.0"
+    }
+  }
 }
 ```
 
@@ -67,7 +70,7 @@ Fedora CoreOS publishes images for Azure, but does not yet upload them. Azure al
 xz -d fedora-coreos-31.20200323.3.2-azure.x86_64.vhd.xz
 ```
 
-Create an Azure disk (note its ID) and create an Azure image from it (note its ID).
+Create an Azure disk (note disk ID) and create an Azure image from it (note image ID).
 
 ```
 az disk create --name fedora-coreos-31.20200323.3.2 -g GROUP --source https://BUCKET.blob.core.windows.net/fedora-coreos/fedora-coreos-31.20200323.3.2-azure.x86_64.vhd
@@ -83,7 +86,7 @@ Define a Kubernetes cluster using the module `azure/fedora-coreos/kubernetes`.
 
 ```tf
 module "ramius" {
-  source = "git::https://github.com/poseidon/typhoon//azure/fedora-coreos/kubernetes?ref=v1.18.2"
+  source = "git::https://github.com/poseidon/typhoon//azure/fedora-coreos/kubernetes?ref=v1.18.8"
 
   # Azure
   cluster_name   = "ramius"
@@ -158,9 +161,9 @@ List nodes in the cluster.
 $ export KUBECONFIG=/home/user/.kube/configs/ramius-config
 $ kubectl get nodes
 NAME                  STATUS  ROLES   AGE  VERSION
-ramius-controller-0   Ready   <none>  24m  v1.18.2
-ramius-worker-000001  Ready   <none>  25m  v1.18.2
-ramius-worker-000002  Ready   <none>  24m  v1.18.2
+ramius-controller-0   Ready   <none>  24m  v1.18.8
+ramius-worker-000001  Ready   <none>  25m  v1.18.8
+ramius-worker-000002  Ready   <none>  24m  v1.18.8
 ```
 
 List the pods.
@@ -242,7 +245,7 @@ Reference the DNS zone with `azurerm_dns_zone.clusters.name` and its resource gr
 | worker_priority | Set priority to Spot to use reduced cost surplus capacity, with the tradeoff that instances can be deallocated at any time | Regular | Spot |
 | controller_snippets | Controller Fedora CoreOS Config snippets | [] | [example](/advanced/customization/#usage) |
 | worker_snippets | Worker Fedora CoreOS Config snippets | [] | [example](/advanced/customization/#usage) |
-| networking | Choice of networking provider | "calico" | "flannel" or "calico" |
+| networking | Choice of networking provider | "calico" | "calico" or "cilium" or "flannel" |
 | host_cidr | CIDR IPv4 range to assign to instances | "10.0.0.0/16" | "10.0.0.0/20" |
 | pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
 | service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |

@@ -1,9 +1,9 @@
 # Kubernetes assets (kubeconfig, manifests)
 module "bootstrap" {
-  source = "git::https://github.com/poseidon/terraform-render-bootstrap.git?ref=14d0b2087962a0f2557c184f3f523548ce19bbdc"
+  source = "git::https://github.com/takescoop/terraform-render-bootstrap.git?ref=d3132edba9f84ad210376f0632d435c08d6ce3e4"
 
   cluster_name          = var.cluster_name
-  api_servers           = [format("%s.%s", var.cluster_name, var.dns_zone)]
+  api_servers           = concat(list(format("%s.%s", var.cluster_name, var.dns_zone)), var.apiserver_aliases)
   etcd_servers          = aws_route53_record.etcds.*.fqdn
   asset_dir             = var.asset_dir
   networking            = var.networking
@@ -15,5 +15,8 @@ module "bootstrap" {
   enable_aggregation    = var.enable_aggregation
 
   trusted_certs_dir = "/etc/pki/tls/certs"
+
+  # scoop
+  apiserver_arguments = var.apiserver_arguments
 }
 

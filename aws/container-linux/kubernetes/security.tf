@@ -13,6 +13,30 @@ resource "aws_security_group" "controller" {
   }
 }
 
+resource "aws_security_group_rule" "controller-icmp" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "icmp"
+  from_port                = 8
+  to_port                  = 0
+  source_security_group_id = aws_security_group.worker.id
+}
+
+resource "aws_security_group_rule" "controller-icmp-self" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.controller.id
+
+  type      = "ingress"
+  protocol  = "icmp"
+  from_port = 8
+  to_port   = 0
+  self      = true
+}
+
 resource "aws_security_group_rule" "controller-ssh" {
   security_group_id = aws_security_group.controller.id
 
@@ -54,49 +78,30 @@ resource "aws_security_group_rule" "controller-etcd-metrics-self" {
   self      = true
 }
 
-resource "aws_security_group_rule" "controller-apiserver" {
-  security_group_id = aws_security_group.controller.id
+resource "aws_security_group_rule" "controller-cilium-health" {
+  count = var.networking == "cilium" ? 1 : 0
 
-  type        = "ingress"
-  protocol    = "tcp"
-  from_port   = 6443
-  to_port     = 6443
-  cidr_blocks = ["0.0.0.0/0"]
-}
-
-# Allow Prometheus to scrape kube-proxy
-resource "aws_security_group_rule" "kube-proxy-metrics" {
   security_group_id = aws_security_group.controller.id
 
   type                     = "ingress"
   protocol                 = "tcp"
-  from_port                = 10249
-  to_port                  = 10249
+  from_port                = 4240
+  to_port                  = 4240
   source_security_group_id = aws_security_group.worker.id
 }
 
-# Allow Prometheus to scrape kube-scheduler
-resource "aws_security_group_rule" "controller-scheduler-metrics" {
+resource "aws_security_group_rule" "controller-cilium-health-self" {
+  count             = var.networking == "cilium" ? 1 : 0
   security_group_id = aws_security_group.controller.id
 
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 10251
-  to_port                  = 10251
-  source_security_group_id = aws_security_group.worker.id
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 4240
+  to_port   = 4240
+  self      = true
 }
 
-# Allow Prometheus to scrape kube-controller-manager
-resource "aws_security_group_rule" "controller-manager-metrics" {
-  security_group_id = aws_security_group.controller.id
-
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 10252
-  to_port                  = 10252
-  source_security_group_id = aws_security_group.worker.id
-}
-
+# IANA VXLAN default
 resource "aws_security_group_rule" "controller-vxlan" {
   count = var.networking == "flannel" ? 1 : 0
 
@@ -121,6 +126,63 @@ resource "aws_security_group_rule" "controller-vxlan-self" {
   self      = true
 }
 
+resource "aws_security_group_rule" "controller-apiserver" {
+  security_group_id = aws_security_group.controller.id
+
+  type        = "ingress"
+  protocol    = "tcp"
+  from_port   = 6443
+  to_port     = 6443
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+# Allow Prometheus to scrape kube-scheduler
+resource "aws_security_group_rule" "controller-scheduler-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10251
+  to_port                  = 10251
+  source_security_group_id = aws_security_group.worker.id
+}
+
+# Allow Prometheus to scrape kube-controller-manager
+resource "aws_security_group_rule" "controller-manager-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10252
+  to_port                  = 10252
+  source_security_group_id = aws_security_group.worker.id
+}
+
+# Linux VXLAN default
+resource "aws_security_group_rule" "controller-linux-vxlan" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "udp"
+  from_port                = 8472
+  to_port                  = 8472
+  source_security_group_id = aws_security_group.worker.id
+}
+
+resource "aws_security_group_rule" "controller-linux-vxlan-self" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.controller.id
+
+  type      = "ingress"
+  protocol  = "udp"
+  from_port = 4789
+  to_port   = 4789
+  self      = true
+}
+
 # Allow Prometheus to scrape node-exporter daemonset
 resource "aws_security_group_rule" "controller-node-exporter" {
   security_group_id = aws_security_group.controller.id
@@ -129,6 +191,17 @@ resource "aws_security_group_rule" "controller-node-exporter" {
   protocol                 = "tcp"
   from_port                = 9100
   to_port                  = 9100
+  source_security_group_id = aws_security_group.worker.id
+}
+
+# Allow Prometheus to scrape kube-proxy
+resource "aws_security_group_rule" "kube-proxy-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10249
+  to_port                  = 10249
   source_security_group_id = aws_security_group.worker.id
 }
 
@@ -151,6 +224,28 @@ resource "aws_security_group_rule" "controller-kubelet-self" {
   from_port = 10250
   to_port   = 10250
   self      = true
+}
+
+# Allow Prometheus to scrape kube-scheduler
+resource "aws_security_group_rule" "controller-scheduler-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10251
+  to_port                  = 10251
+  source_security_group_id = aws_security_group.worker.id
+}
+
+# Allow Prometheus to scrape kube-controller-manager
+resource "aws_security_group_rule" "controller-manager-metrics" {
+  security_group_id = aws_security_group.controller.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 10252
+  to_port                  = 10252
+  source_security_group_id = aws_security_group.worker.id
 }
 
 resource "aws_security_group_rule" "controller-bgp" {
@@ -237,6 +332,30 @@ resource "aws_security_group" "worker" {
   }
 }
 
+resource "aws_security_group_rule" "worker-icmp" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
+
+  type                     = "ingress"
+  protocol                 = "icmp"
+  from_port                = 8
+  to_port                  = 0
+  source_security_group_id = aws_security_group.controller.id
+}
+
+resource "aws_security_group_rule" "worker-icmp-self" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
+
+  type      = "ingress"
+  protocol  = "icmp"
+  from_port = 8
+  to_port   = 0
+  self      = true
+}
+
 resource "aws_security_group_rule" "worker-ssh-bastion" {
   security_group_id = aws_security_group.worker.id
 
@@ -277,6 +396,31 @@ resource "aws_security_group_rule" "worker-https" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "worker-cilium-health" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
+
+  type                     = "ingress"
+  protocol                 = "tcp"
+  from_port                = 4240
+  to_port                  = 4240
+  source_security_group_id = aws_security_group.controller.id
+}
+
+resource "aws_security_group_rule" "worker-cilium-health-self" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
+
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 4240
+  to_port   = 4240
+  self      = true
+}
+
+# IANA VXLAN default
 resource "aws_security_group_rule" "worker-vxlan" {
   count = var.networking == "flannel" ? 1 : 0
 
@@ -291,6 +435,31 @@ resource "aws_security_group_rule" "worker-vxlan" {
 
 resource "aws_security_group_rule" "worker-vxlan-self" {
   count = var.networking == "flannel" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
+
+  type      = "ingress"
+  protocol  = "udp"
+  from_port = 4789
+  to_port   = 4789
+  self      = true
+}
+
+# Linux VXLAN default
+resource "aws_security_group_rule" "worker-linux-vxlan" {
+  count = var.networking == "cilium" ? 1 : 0
+
+  security_group_id = aws_security_group.worker.id
+
+  type                     = "ingress"
+  protocol                 = "udp"
+  from_port                = 8472
+  to_port                  = 8472
+  source_security_group_id = aws_security_group.controller.id
+}
+
+resource "aws_security_group_rule" "worker-linux-vxlan-self" {
+  count = var.networking == "cilium" ? 1 : 0
 
   security_group_id = aws_security_group.worker.id
 

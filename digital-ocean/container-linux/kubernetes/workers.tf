@@ -35,9 +35,10 @@ resource "digitalocean_droplet" "workers" {
   size  = var.worker_type
 
   # network
-  # only official DigitalOcean images support IPv6
-  ipv6               = local.is_official_image
   private_networking = true
+  vpc_uuid           = digitalocean_vpc.network.id
+  # only official DigitalOcean images support IPv6
+  ipv6 = local.is_official_image
 
   user_data = data.ct_config.worker-ignition.rendered
   ssh_keys  = var.ssh_fingerprints
@@ -58,9 +59,9 @@ resource "digitalocean_tag" "workers" {
 
 # Worker Ignition config
 data "ct_config" "worker-ignition" {
-  content      = data.template_file.worker-config.rendered
-  pretty_print = false
-  snippets     = var.worker_snippets
+  content  = data.template_file.worker-config.rendered
+  strict   = true
+  snippets = var.worker_snippets
 }
 
 # Worker Container Linux config

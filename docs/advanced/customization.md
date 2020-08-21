@@ -83,7 +83,7 @@ module "mercury" {
 }
 ```
 
-### Container Linux
+### Flatcar Linux
 
 Define a Container Linux Config (CLC) ([config](https://github.com/coreos/container-linux-config-transpiler/blob/master/doc/configuration.md), [examples](https://github.com/coreos/container-linux-config-transpiler/blob/master/doc/examples.md)) in version control near your Terraform workspace directory (e.g. perhaps in a `snippets` subdirectory). You may organize snippets into multiple files, if desired.
 
@@ -125,7 +125,7 @@ systemd:
             Environment="ETCD_LOG_PACKAGE_LEVELS=etcdserver=WARNING,security=DEBUG"
 ```
 
-Reference the CLC contents by location (e.g. `file("./custom-units.yaml")`). On [AWS](/cl/aws/#cluster), [Azure](/cl/azure/#cluster), [DigitalOcean](/cl/digital-ocean/#cluster), or [Google Cloud](/cl/google-cloud/#cluster) extend the `controller_snippets` or `worker_snippets` list variables.
+Reference the CLC contents by location (e.g. `file("./custom-units.yaml")`). On [AWS](/flatcar-linux/aws/#cluster), [Azure](/flatcar-linux/azure/#cluster), [DigitalOcean](/flatcar-linux/digital-ocean/#cluster), or [Google Cloud](/flatcar-linux/google-cloud/#cluster) extend the `controller_snippets` or `worker_snippets` list variables.
 
 ```tf
 module "nemo" {
@@ -145,7 +145,7 @@ module "nemo" {
 }
 ```
 
-On [Bare-Metal](/cl/bare-metal/#cluster), different CLCs may be used for each node (since hardware may be heterogeneous). Extend the `snippets` map variable by mapping a controller or worker name key to a list of snippets.
+On [Bare-Metal](/flatcar-linux/bare-metal/#cluster), different CLCs may be used for each node (since hardware may be heterogeneous). Extend the `snippets` map variable by mapping a controller or worker name key to a list of snippets.
 
 ```tf
 module "mercury" {
@@ -173,4 +173,35 @@ module "nemo" {
 ```
 
 To customize low-level Kubernetes control plane bootstrapping, see the [poseidon/terraform-render-bootstrap](https://github.com/poseidon/terraform-render-bootstrap) Terraform module.
+
+## Kubelet
+
+Typhoon publishes Kubelet [container images](/topics/security/#container-images) to Quay.io (default) and to Dockerhub (in case of a Quay [outage](https://github.com/poseidon/typhoon/issues/735) or breach). Quay automated builds also provide the option for fully verifiable tagged images (`build-{short_sha}`).
+
+To set an alternative Kubelet image, use a snippet to set a systemd dropin.
+
+```
+# host-image-override.yaml
+variant: fcos           <- remove for Flatcar Linux
+version: 1.0.0          <- remove for Flatcar Linux
+systemd:
+  units:
+    - name: kubelet.service
+      dropins:
+        - name: 10-image-override.conf
+          contents: |
+            [Service]
+            Environment=KUBELET_IMAGE=docker.io/psdn/kubelet:v1.18.3
+```
+
+```
+module "nemo" {
+  ...
+
+  worker_snippets = [
+    file("./snippets/host-image-override.yaml")
+  ]
+  ...
+}
+```
 

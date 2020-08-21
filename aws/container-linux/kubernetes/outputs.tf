@@ -127,3 +127,4 @@ output "worker_autoscaling_group" {
   value       = module.workers.autoscaling_group
   description = "Name of the workers autoscaling group"
 }
+

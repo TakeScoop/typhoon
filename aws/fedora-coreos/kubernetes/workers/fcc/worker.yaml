@@ -9,11 +9,12 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Wait for DNS entries
+        Description=Wait for DNS and hostname
         Before=kubelet.service
         [Service]
         Type=oneshot
         RemainAfterExit=true
+        ExecStartPre=/bin/sh -c 'while [ `hostname -s` == "localhost" ]; do sleep 1; done;'
         ExecStart=/bin/sh -c 'while ! /usr/bin/grep '^[^#[:space:]]' /etc/resolv.conf > /dev/null; do sleep 1; done'
         [Install]
         RequiredBy=kubelet.service
@@ -21,9 +22,10 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Kubelet via Hyperkube (System Container)
+        Description=Kubelet (System Container)
         Wants=rpc-statd.service
         [Service]
+        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.18.8
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
         ExecStartPre=/bin/mkdir -p /opt/cni/bin
@@ -42,28 +44,29 @@ systemd:
           --volume /run:/run \
           --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
           --volume /sys/fs/cgroup/systemd:/sys/fs/cgroup/systemd \
-          --volume /etc/pki/tls/certs:/usr/share/ca-certificates:ro \
+          --volume /etc/pki/tls/certs:/etc/pki/tls/certs:ro \
+          --volume /etc/pki/ca-trust/extracted:/etc/pki/ca-trust/extracted:ro \
           --volume /var/lib/calico:/var/lib/calico:ro \
           --volume /var/lib/docker:/var/lib/docker \
           --volume /var/lib/kubelet:/var/lib/kubelet:rshared,z \
           --volume /var/log:/var/log \
           --volume /var/run/lock:/var/run/lock:z \
           --volume /opt/cni/bin:/opt/cni/bin:z \
-          quay.io/poseidon/kubelet:v1.18.2 \
+          $${KUBELET_IMAGE} \
           --anonymous-auth=false \
           --authentication-token-webhook \
           --authorization-mode=Webhook \
+          --bootstrap-kubeconfig=/etc/kubernetes/kubeconfig \
           --cgroup-driver=systemd \
           --cgroups-per-qos=true \
           --enforce-node-allocatable=pods \
           --client-ca-file=/etc/kubernetes/ca.crt \
+          --cloud-provider=aws \
           --cluster_dns=${cluster_dns_service_ip} \
           --cluster_domain=${cluster_domain_suffix} \
           --cni-conf-dir=/etc/kubernetes/cni/net.d \
-          --exit-on-lock-contention \
           --healthz-port=0 \
-          --kubeconfig=/etc/kubernetes/kubeconfig \
-          --lock-file=/var/run/lock/kubelet.lock \
+          --kubeconfig=/var/lib/kubelet/kubeconfig \
           --network-plugin=cni \
           --node-labels=node.kubernetes.io/node \
           %{~ for label in split(",", node_labels) ~}
@@ -71,6 +74,7 @@ systemd:
           %{~ endfor ~}
           --pod-manifest-path=/etc/kubernetes/manifests \
           --read-only-port=0 \
+          --rotate-certificates \
           --volume-plugin-dir=/var/lib/kubelet/volumeplugins
         ExecStop=-/usr/bin/podman stop kubelet
         Delegate=yes
@@ -87,7 +91,7 @@ systemd:
         Type=oneshot
         RemainAfterExit=true
         ExecStart=/bin/true
-        ExecStop=/bin/bash -c '/usr/bin/podman run --volume /etc/kubernetes:/etc/kubernetes:ro,z --entrypoint /usr/local/bin/kubectl quay.io/poseidon/kubelet:v1.18.2 --kubeconfig=/etc/kubernetes/kubeconfig delete node $HOSTNAME'
+        ExecStop=/bin/bash -c '/usr/bin/podman run --volume /etc/kubernetes:/etc/kubernetes:ro,z --entrypoint /usr/local/bin/kubectl quay.io/poseidon/kubelet:v1.18.8 --kubeconfig=/etc/kubernetes/kubeconfig delete node $HOSTNAME'
         [Install]
         WantedBy=multi-user.target
 storage:
@@ -103,6 +107,18 @@ storage:
       contents:
         inline: |
           fs.inotify.max_user_watches=16184
+    - path: /etc/sysctl.d/reverse-path-filter.conf
+      contents:
+        inline: |
+          net.ipv4.conf.default.rp_filter=0
+          net.ipv4.conf.*.rp_filter=0
+    - path: /etc/systemd/network/50-flannel.link
+      contents:
+        inline: |
+          [Match]
+          OriginalName=flannel*
+          [Link]
+          MACAddressPolicy=none
     - path: /etc/systemd/system.conf.d/accounting.conf
       contents:
         inline: |
@@ -110,9 +126,3 @@ storage:
           DefaultCPUAccounting=yes
           DefaultMemoryAccounting=yes
           DefaultBlockIOAccounting=yes
-passwd:
-  users:
-    - name: core
-      ssh_authorized_keys:
-        - ${ssh_authorized_key}
-

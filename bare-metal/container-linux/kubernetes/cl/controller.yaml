@@ -60,6 +60,7 @@ systemd:
         Description=Kubelet via Hyperkube
         Wants=rpc-statd.service
         [Service]
+        Environment=KUBELET_IMAGE=docker://quay.io/poseidon/kubelet:v1.18.8
         Environment=KUBELET_CGROUP_DRIVER=${cgroup_driver}
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
@@ -103,7 +104,7 @@ systemd:
           --mount volume=etc-iscsi,target=/etc/iscsi \
           --volume usr-sbin-iscsiadm,kind=host,source=/usr/sbin/iscsiadm \
           --mount volume=usr-sbin-iscsiadm,target=/sbin/iscsiadm \
-          docker://quay.io/poseidon/kubelet:v1.18.2 -- \
+          $${KUBELET_IMAGE} -- \
           --anonymous-auth=false \
           --authentication-token-webhook \
           --authorization-mode=Webhook \
@@ -147,7 +148,7 @@ systemd:
             --volume script,kind=host,source=/opt/bootstrap/apply \
             --mount volume=script,target=/apply \
             --insecure-options=image \
-            docker://quay.io/poseidon/kubelet:v1.18.2 \
+            docker://quay.io/poseidon/kubelet:v1.18.8 \
             --net=host \
             --dns=host \
             --exec=/apply

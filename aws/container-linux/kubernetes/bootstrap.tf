@@ -1,6 +1,6 @@
 # Kubernetes assets (kubeconfig, manifests)
 module "bootstrap" {
-  source = "git::https://github.com/takescoop/terraform-render-bootstrap.git?ref=a7ad7d74586fd698be22b75b4cc314c2d3dc4bcd"
+  source = "git::https://github.com/takescoop/terraform-render-bootstrap.git?ref=d3132edba9f84ad210376f0632d435c08d6ce3e4"
 
   cluster_name          = var.cluster_name
   api_servers           = concat(list(format("%s.%s", var.cluster_name, var.dns_zone)), var.apiserver_aliases)
@@ -17,5 +17,3 @@ module "bootstrap" {
   # scoop
   apiserver_arguments = var.apiserver_arguments
 }
-
-

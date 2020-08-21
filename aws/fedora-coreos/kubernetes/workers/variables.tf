@@ -1,3 +1,8 @@
+variable "cluster_name" {
+  type        = string
+  description = "Name of the cluster the workers belong to"
+}
+
 variable "name" {
   type        = string
   description = "Unique name for the worker pool"
@@ -34,9 +39,9 @@ variable "instance_type" {
   default     = "t3.small"
 }
 
-variable "os_image" {
+variable "os_stream" {
   type        = string
-  description = "AMI channel for Fedora CoreOS (not yet used)"
+  description = "Fedora CoreOs image stream for instances (e.g. stable, testing, next)"
   default     = "stable"
 }
 
@@ -83,11 +88,6 @@ variable "kubeconfig" {
   description = "Must be set to `kubeconfig` output by cluster"
 }
 
-variable "ssh_authorized_key" {
-  type        = string
-  description = "SSH public key for user 'core'"
-}
-
 variable "service_cidr" {
   type        = string
   description = <<EOD
@@ -107,4 +107,27 @@ variable "node_labels" {
   type        = list(string)
   description = "List of initial node labels"
   default     = []
+}
+
+# Scoop variables
+
+variable "ami" {
+  type        = string
+  description = "Custom AMI to use for launching workers (defaults to latest stable CoreOS)"
+  default     = ""
+}
+
+variable "base_ignition_config_path" {
+  type        = string
+  description = "The full path of the S3 object that stores base ignition config"
+}
+
+variable "base_ignition_config_read_policy" {
+  type        = string
+  description = "The contents of the IAM policy that allows reading base ignition config"
+}
+
+variable "ignition_config_bucket" {
+  type        = string
+  description = "The name of S3 bucket that stores ignition configs for bastion, controllers and workers"
 }

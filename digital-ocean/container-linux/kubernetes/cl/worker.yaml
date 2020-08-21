@@ -2,11 +2,11 @@
 systemd:
   units:
     - name: docker.service
-      enable: true
+      enabled: true
     - name: locksmithd.service
       mask: true
     - name: kubelet.path
-      enable: true
+      enabled: true
       contents: |
         [Unit]
         Description=Watch for kubeconfig
@@ -15,7 +15,7 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     - name: wait-for-dns.service
-      enable: true
+      enabled: true
       contents: |
         [Unit]
         Description=Wait for DNS entries
@@ -30,11 +30,12 @@ systemd:
     - name: kubelet.service
       contents: |
         [Unit]
-        Description=Kubelet via Hyperkube
+        Description=Kubelet
         Requires=coreos-metadata.service
         After=coreos-metadata.service
         Wants=rpc-statd.service
         [Service]
+        Environment=KUBELET_IMAGE=docker://quay.io/poseidon/kubelet:v1.18.8
         EnvironmentFile=/run/metadata/coreos
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
@@ -74,23 +75,23 @@ systemd:
           --mount volume=var-log,target=/var/log \
           --volume opt-cni-bin,kind=host,source=/opt/cni/bin \
           --mount volume=opt-cni-bin,target=/opt/cni/bin \
-          docker://quay.io/poseidon/kubelet:v1.18.2 -- \
+          $${KUBELET_IMAGE} -- \
           --anonymous-auth=false \
           --authentication-token-webhook \
           --authorization-mode=Webhook \
+          --bootstrap-kubeconfig=/etc/kubernetes/kubeconfig \
           --client-ca-file=/etc/kubernetes/ca.crt \
           --cluster_dns=${cluster_dns_service_ip} \
           --cluster_domain=${cluster_domain_suffix} \
           --cni-conf-dir=/etc/kubernetes/cni/net.d \
-          --exit-on-lock-contention \
           --healthz-port=0 \
           --hostname-override=$${COREOS_DIGITALOCEAN_IPV4_PRIVATE_0} \
-          --kubeconfig=/etc/kubernetes/kubeconfig \
-          --lock-file=/var/run/lock/kubelet.lock \
+          --kubeconfig=/var/lib/kubelet/kubeconfig \
           --network-plugin=cni \
           --node-labels=node.kubernetes.io/node \
           --pod-manifest-path=/etc/kubernetes/manifests \
           --read-only-port=0 \
+          --rotate-certificates \
           --volume-plugin-dir=/var/lib/kubelet/volumeplugins
         ExecStop=-/usr/bin/rkt stop --uuid-file=/var/cache/kubelet-pod.uuid
         Restart=always
@@ -98,7 +99,7 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     - name: delete-node.service
-      enable: true
+      enabled: true
       contents: |
         [Unit]
         Description=Waiting to delete Kubernetes node on shutdown
@@ -113,9 +114,11 @@ storage:
   directories:
     - path: /etc/kubernetes
       filesystem: root
+      mode: 0755
   files:
     - path: /etc/sysctl.d/max-user-watches.conf
       filesystem: root
+      mode: 0644
       contents:
         inline: |
           fs.inotify.max_user_watches=16184
@@ -131,7 +134,7 @@ storage:
             --volume config,kind=host,source=/etc/kubernetes \
             --mount volume=config,target=/etc/kubernetes \
             --insecure-options=image \
-            docker://quay.io/poseidon/kubelet:v1.18.2 \
+            docker://quay.io/poseidon/kubelet:v1.18.8 \
             --net=host \
             --dns=host \
             --exec=/usr/local/bin/kubectl -- --kubeconfig=/etc/kubernetes/kubeconfig delete node $(hostname)

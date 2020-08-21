@@ -20,9 +20,10 @@ systemd:
     - name: kubelet.service
       contents: |
         [Unit]
-        Description=Kubelet via Hyperkube (System Container)
+        Description=Kubelet (System Container)
         Wants=rpc-statd.service
         [Service]
+        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.18.8
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
         ExecStartPre=/bin/mkdir -p /opt/cni/bin
@@ -50,10 +51,11 @@ systemd:
           --volume /opt/cni/bin:/opt/cni/bin:z \
           --volume /etc/iscsi:/etc/iscsi \
           --volume /sbin/iscsiadm:/sbin/iscsiadm \
-          quay.io/poseidon/kubelet:v1.18.2 \
+          $${KUBELET_IMAGE} \
           --anonymous-auth=false \
           --authentication-token-webhook \
           --authorization-mode=Webhook \
+          --bootstrap-kubeconfig=/etc/kubernetes/kubeconfig \
           --cgroup-driver=systemd \
           --cgroups-per-qos=true \
           --enforce-node-allocatable=pods \
@@ -61,11 +63,9 @@ systemd:
           --cluster_dns=${cluster_dns_service_ip} \
           --cluster_domain=${cluster_domain_suffix} \
           --cni-conf-dir=/etc/kubernetes/cni/net.d \
-          --exit-on-lock-contention \
           --healthz-port=0 \
           --hostname-override=${domain_name} \
-          --kubeconfig=/etc/kubernetes/kubeconfig \
-          --lock-file=/var/run/lock/kubelet.lock \
+          --kubeconfig=/var/lib/kubelet/kubeconfig \
           --network-plugin=cni \
           --node-labels=node.kubernetes.io/node \
           %{~ for label in compact(split(",", node_labels)) ~}
@@ -76,6 +76,7 @@ systemd:
           %{~ endfor ~}
           --pod-manifest-path=/etc/kubernetes/manifests \
           --read-only-port=0 \
+          --rotate-certificates \
           --volume-plugin-dir=/var/lib/kubelet/volumeplugins
         ExecStop=-/usr/bin/podman stop kubelet
         Delegate=yes
@@ -105,6 +106,18 @@ storage:
       contents:
         inline: |
           fs.inotify.max_user_watches=16184
+    - path: /etc/sysctl.d/reverse-path-filter.conf
+      contents:
+        inline: |
+          net.ipv4.conf.default.rp_filter=0
+          net.ipv4.conf.*.rp_filter=0
+    - path: /etc/systemd/network/50-flannel.link
+      contents:
+        inline: |
+          [Match]
+          OriginalName=flannel*
+          [Link]
+          MACAddressPolicy=none
     - path: /etc/systemd/system.conf.d/accounting.conf
       contents:
         inline: |

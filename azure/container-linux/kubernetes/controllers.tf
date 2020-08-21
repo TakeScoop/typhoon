@@ -53,21 +53,22 @@ resource "azurerm_linux_virtual_machine" "controllers" {
     storage_account_type = "Premium_LRS"
   }
 
+  # CoreOS Container Linux or Flatcar Container Linux
   source_image_reference {
     publisher = local.flavor == "flatcar" ? "Kinvolk" : "CoreOS"
-    offer     = local.flavor == "flatcar" ? "flatcar-container-linux" : "CoreOS"
+    offer     = local.flavor == "flatcar" ? "flatcar-container-linux-free" : "CoreOS"
     sku       = local.channel
     version   = "latest"
   }
 
-  # Gross hack just for Flatcar Linux
+  # Gross hack for Flatcar Linux
   dynamic "plan" {
     for_each = local.flavor == "flatcar" ? [1] : []
 
     content {
       name      = local.channel
       publisher = "kinvolk"
-      product   = "flatcar-container-linux"
+      product   = "flatcar-container-linux-free"
     }
   }
 
@@ -138,10 +139,10 @@ resource "azurerm_network_interface_backend_address_pool_association" "controlle
 
 # Controller Ignition configs
 data "ct_config" "controller-ignitions" {
-  count        = var.controller_count
-  content      = data.template_file.controller-configs.*.rendered[count.index]
-  pretty_print = false
-  snippets     = var.controller_snippets
+  count    = var.controller_count
+  content  = data.template_file.controller-configs.*.rendered[count.index]
+  strict   = true
+  snippets = var.controller_snippets
 }
 
 # Controller Container Linux configs
@@ -156,6 +157,7 @@ data "template_file" "controller-configs" {
     etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
     # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
     etcd_initial_cluster   = join(",", data.template_file.etcds.*.rendered)
+    cgroup_driver          = local.flavor == "flatcar" && local.channel == "edge" ? "systemd" : "cgroupfs"
     kubeconfig             = indent(10, module.bootstrap.kubeconfig-kubelet)
     ssh_authorized_key     = var.ssh_authorized_key
     cluster_dns_service_ip = cidrhost(var.service_cidr, 10)

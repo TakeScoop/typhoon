@@ -4,39 +4,245 @@ Notable changes between versions.
 
 ## Latest
 
-* Kubernetes [v1.18.2](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1182)
-* Choose Fedora CoreOS or Flatcar Linux (**action required**)
-  * Use a `fedora-coreos` module for Fedora CoreOS
-  * Use a `container-linux` module for Flatcar Linux
-  * CoreOS Container Linux [won't receive updates](https://coreos.com/os/eol/) after May 2020
+### v1.18.8
+
+* Kubernetes [v1.18.8](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1188)
+* Migrate from Terraform v0.12.x to v0.13.x ([#804](https://github.com/poseidon/typhoon/pull/804)) (**action required**)
+  * Recommend Terraform v0.13.x ([migration guide](https://typhoon.psdn.io/topics/maintenance/#terraform-versions))
+  * Support automatic install of poseidon's provider plugins ([poseidon/ct](https://registry.terraform.io/providers/poseidon/ct/latest), [poseidon/matchbox](https://registry.terraform.io/providers/poseidon/matchbox/latest))
+  * Require Terraform v0.12.26+ (migration compatibility)
+  * Require `terraform-provider-ct` v0.6.1
+  * Require `terraform-provider-matchbox` v0.4.1
+* Update etcd from v3.4.9 to [v3.4.10](https://github.com/etcd-io/etcd/releases/tag/v3.4.10)
+* Update CoreDNS from v1.6.7 to [v1.7.0](https://coredns.io/2020/06/15/coredns-1.7.0-release/)
+* Update Cilium from v1.8.1 to [v1.8.2](https://github.com/cilium/cilium/releases/tag/v1.8.2)
+* Update [coreos/flannel-cni](https://github.com/coreos/flannel-cni) to [poseidon/flannel-cni](https://github.com/poseidon/flannel-cni) ([#798](https://github.com/poseidon/typhoon/pull/798))
+  * Update CNI plugins and fix CVEs with Flannel CNI (non-default)
+  * Transition to a poseidon maintained container image
+
+### AWS
+
+* Allow `terraform-provider-aws` v3.0+ ([#803](https://github.com/poseidon/typhoon/pull/803))
+  * Recommend updating `terraform-provider-aws` to v3.0+
+  * Continue to allow v2.23+, no v3.x specific features are used
+
+### DigitalOcean
+
+* Require `terraform-provider-digitalocean` v1.21+ for Terraform v0.13.x (unenforced)
+* Require `terraform-provider-digitalocean` v1.20+ for Terraform v0.12.x
+
+### Fedora CoreOS
+
+* Fix support for Flannel with Fedora CoreOS ([#795](https://github.com/poseidon/typhoon/pull/795))
+  * Configure `flannel.1` link to select its own MAC address to solve flannel
+  pod-to-pod traffic drops starting with default link changes in Fedora CoreOS
+  32.20200629.3.0 ([details](https://github.com/coreos/fedora-coreos-tracker/issues/574#issuecomment-665487296))
+
+#### Addons
+
+* Update Prometheus from v2.19.2 to [v2.20.0](https://github.com/prometheus/prometheus/releases/tag/v2.20.0)
+* Update Grafana from v7.0.6 to [v7.1.3](https://github.com/grafana/grafana/releases/tag/v7.1.3)
+
+## v1.18.6
+
+* Kubernetes [v1.18.6](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1186)
+* Update Calico from v3.15.0 to [v3.15.1](https://docs.projectcalico.org/v3.15/release-notes/)
+* Update Cilium from v1.8.0 to [v1.8.1](https://github.com/cilium/cilium/releases/tag/v1.8.1)
+
+#### Addons
+
+* Update nginx-ingress from v0.33.0 to [v0.34.1](https://github.com/kubernetes/ingress-nginx/releases/tag/nginx-0.34.1)
+  * [ingress-nginx](https://github.com/kubernetes/ingress-nginx/releases/tag/controller-v0.34.0) will publish images only to gcr.io
+* Update Prometheus from v2.19.1 to [v2.19.2](https://github.com/prometheus/prometheus/releases/tag/v2.19.2)
+* Update Grafana from v7.0.4 to [v7.0.6](https://github.com/grafana/grafana/releases/tag/v7.0.6)
+
+## v1.18.5
+
+* Kubernetes [v1.18.5](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1185)
+* Add Cilium v1.8.0 as a (experimental) CNI provider option ([#760](https://github.com/poseidon/typhoon/pull/760))
+  * Set `networking` to "cilium" to enable
+* Update Calico from v3.14.1 to [v3.15.0](https://docs.projectcalico.org/v3.15/release-notes/)
+
+#### DigitalOcean
+
+* Isolate each cluster in an independent DigitalOcean VPC ([#776](https://github.com/poseidon/typhoon/pull/776))
+  * Create droplets in a VPC per cluster (matches Typhoon AWS, Azure, and GCP)
+  * Require `terraform-provider-digitalocean` v1.16.0+ (action required)
+  * Output `vpc_id` for use with an attached DigitalOcean [loadbalancer](https://github.com/poseidon/typhoon/blob/v1.18.5/docs/architecture/digitalocean.md#custom-load-balancer)
+
+### Fedora CoreOS
+
+#### Google Cloud
+
+* Promote Fedora CoreOS to stable
+* Remove `os_image` variable deprecated in v1.18.3 ([#777](https://github.com/poseidon/typhoon/pull/777))
+  * Use `os_stream` to select a Fedora CoreOS image stream
+
+### Flatcar Linux
+
+#### Azure
+
+* Allow using Flatcar Linux Edge by setting `os_image` to "flatcar-edge" ([#778](https://github.com/poseidon/typhoon/pull/778))
+
+#### Addons
+
+* Update Prometheus from v2.19.0 to [v2.19.1](https://github.com/prometheus/prometheus/releases/tag/v2.19.1)
+* Update Grafana from v7.0.3 to [v7.0.4](https://github.com/grafana/grafana/releases/tag/v7.0.4)
+
+## v1.18.4
+
+* Kubernetes [v1.18.4](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1184)
+* Update Kubelet image publishing ([#749](https://github.com/poseidon/typhoon/pull/749))
+  * Build Kubelet images internally and publish to Quay and Dockerhub
+    * [quay.io/poseidon/kubelet](https://quay.io/repository/poseidon/kubelet) (official)
+    * [docker.io/psdn/kubelet](https://hub.docker.com/r/psdn/kubelet) (fallback)
+  * Continue offering automated image builds with an alternate tag strategy (see [docs](https://typhoon.psdn.io/topics/security/#container-images))
+  * [Document](https://typhoon.psdn.io/advanced/customization/#kubelet) use of alternate Kubelet images during registry incidents
+* Update Calico from v3.14.0 to [v3.14.1](https://docs.projectcalico.org/v3.14/release-notes/)
+  * Fix [CVE-2020-13597](https://github.com/kubernetes/kubernetes/issues/91507)
+* Rename controller NoSchedule taint from `node-role.kubernetes.io/master` to `node-role.kubernetes.io/controller` ([#764](https://github.com/poseidon/typhoon/pull/764))
+  * Tolerate the new taint name for workloads that may run on controller nodes
+* Remove node label `node.kubernetes.io/master` from controller nodes ([#764](https://github.com/poseidon/typhoon/pull/764))
+  * Use `node.kubernetes.io/controller` (present since v1.9.5, [#160](https://github.com/poseidon/typhoon/pull/160)) to node select controllers
+* Remove unused Kubelet `-lock-file` and `-exit-on-lock-contention` ([#758](https://github.com/poseidon/typhoon/pull/758))
 
 ### Fedora CoreOS
 
 #### Azure
 
-* Add support for Fedora CoreOS ([#704](https://github.com/poseidon/typhoon/pull/704))
-
-### Flatcar Linux / Container Linux
+* Use `strict` Fedora CoreOS Config (FCC) snippet parsing ([#755](https://github.com/poseidon/typhoon/pull/755))
+* Reduce Calico vxlan interface MTU to maintain performance ([#767](https://github.com/poseidon/typhoon/pull/766))
 
 #### AWS
 
-* Change Container Linux `os_image` default from `coreos-stable` to `flatcar-stable` ([#702](https://github.com/poseidon/typhoon/pull/702))
+* Fix Kubelet service race with hostname update ([#766](https://github.com/poseidon/typhoon/pull/766))
+  * Wait for a hostname to avoid Kubelet trying to register as `localhost`
 
-#### Azure
+### Flatcar Linux
 
-* Change Container Linux `os_image` default from `coreos-stable` to `flatcar-stable` ([#702](https://github.com/poseidon/typhoon/pull/702))
+* Use `strict` Container Linux Config (CLC) snippet parsing ([#755](https://github.com/poseidon/typhoon/pull/755))
+  * Require `terraform-provider-ct` v0.4+, recommend v0.5+ (**action required**)
 
-#### Bare-Metal
+### Addons
 
-* Container Linux users should change [os_channel](https://typhoon.psdn.io/cl/bare-metal/#required) from a CoreOS channel to a Flatcar channel
+* Update nginx-ingress from v0.32.0 to [v0.33.0](https://github.com/kubernetes/ingress-nginx/releases/tag/nginx-0.33.0)
+* Update Prometheus from v2.18.1 to [v2.19.0](https://github.com/prometheus/prometheus/releases/tag/v2.19.0)
+* Update node-exporter from v1.0.0-rc.1 to [v1.0.1](https://github.com/prometheus/node_exporter/releases/tag/v1.0.1)
+* Update kube-state-metrics from v1.9.6 to v1.9.7
+* Update Grafana from v7.0.0 to v7.0.3
+
+## v1.18.3
+
+* Kubernetes [v1.18.3](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1183)
+* Use Kubelet [TLS bootstrap](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/) with bootstrap token authentication ([#713](https://github.com/poseidon/typhoon/pull/713))
+  * Enable Node [Authorization](https://kubernetes.io/docs/reference/access-authn-authz/node/) and [NodeRestriction](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction) to reduce authorization scope
+  * Renew Kubelet certificates every 72 hours
+* Update etcd from v3.4.7 to [v3.4.9](https://github.com/etcd-io/etcd/releases/tag/v3.4.9)
+* Update Calico from v3.13.1 to [v3.14.0](https://docs.projectcalico.org/v3.14/release-notes/)
+* Add CoreDNS node affinity preference for controller nodes ([#188](https://github.com/poseidon/terraform-render-bootstrap/pull/188))
+* Deprecate CoreOS Container Linux support (no OS [updates](https://coreos.com/os/eol/) after May 2020)
+  * Use a `fedora-coreos` module for Fedora CoreOS
+  * Use a `container-linux` module for Flatcar Linux
+
+### AWS
+
+* Fix Terraform plan error when `controller_count` exceeds AWS zones (e.g. 5 controllers) ([#714](https://github.com/poseidon/typhoon/pull/714))
+  * Regressed in v1.17.1 ([#605](https://github.com/poseidon/typhoon/pull/605))
+
+### Azure
+
+* Update Azure subnets to set `address_prefixes` list ([#730](https://github.com/poseidon/typhoon/pull/730))
+  * Fix warning that `address_prefix` is deprecated
+  * Require `terraform-provider-azurerm` v2.8.0+ (action required)
+
+### DigitalOcean
+
+* Promote DigitalOcean to beta on both Fedora CoreOS and Flatcar Linux
+
+### Fedora CoreOS
+
+* Fix Calico `install-cni` crashloop on Pod restarts ([#724](https://github.com/poseidon/typhoon/pull/724))
+  * SELinux enforcement requires consistent file context MCS level
+  * Restarting a node resolved the issue as a previous workaround
+
+#### AWS
+
+* Support Fedora CoreOS [image streams](https://docs.fedoraproject.org/en-US/fedora-coreos/update-streams/) ([#727](https://github.com/poseidon/typhoon/pull/727))
+  * Add `os_stream` variable to set the stream to `stable` (default), `testing`, or `next`
+  * Remove unused `os_image` variable
 
 #### Google
 
-* Change Container Linux `os_image` to be required. Container Linux users should upload a Flatcar Linux image and set it (**action required**) ([#702](https://github.com/poseidon/typhoon/pull/702))
+* Support Fedora CoreOS [image streams](https://docs.fedoraproject.org/en-US/fedora-coreos/update-streams/) ([#723](https://github.com/poseidon/typhoon/pull/723))
+  * Add `os_stream` variable to set the stream to `stable` (default), `testing`, or `next`
+  * Deprecate `os_image` variable. Manual image uploads are no longer needed
+
+### Flatcar Linux
+
+#### Azure
+
+* Use the Flatcar Linux Azure Marketplace image
+  * Restore [#664](https://github.com/poseidon/typhoon/pull/664) (reverted in [#707](https://github.com/poseidon/typhoon/pull/707)) but use Flatcar Linux new free offer (not byol)
+* Change `os_image` to use a `flatcar-stable` default
+
+#### Google
+
+* Promote Flatcar Linux to beta
+
+### Addons
+
+* Update nginx-ingress from v0.30.0 to [v0.32.0](https://github.com/kubernetes/ingress-nginx/releases/tag/nginx-0.32.0)
+  * Add support for [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)
+* Update Prometheus from v2.17.1 to v2.18.1
+  * Update kube-state-metrics from v1.9.5 to [v1.9.6](https://github.com/kubernetes/kube-state-metrics/releases/tag/v1.9.6)
+  * Update node-exporter from v1.0.0-rc.0 to [v1.0.0-rc.1](https://github.com/prometheus/node_exporter/releases/tag/v1.0.0-rc.1)
+* Update Grafana from v6.7.2 to [v7.0.0](https://grafana.com/docs/grafana/latest/guides/whats-new-in-v7-0/)
+
+## v1.18.2
+
+* Kubernetes [v1.18.2](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.18.md#v1182)
+* Choose Fedora CoreOS or Flatcar Linux (**action required**)
+  * Use a `fedora-coreos` module for Fedora CoreOS
+  * Use a `container-linux` module for Flatcar Linux
+* Change Container Linux modules' defaults from CoreOS Container Linux to [Flatcar Container Linux](https://typhoon.psdn.io/architecture/operating-systems/) ([#702](https://github.com/poseidon/typhoon/pull/702))
+  * CoreOS Container Linux [won't receive updates](https://coreos.com/os/eol/) after May 2020
+
+### Fedora CoreOS
+
+* Fix bootstrap race condition from SELinux unshared content label ([#708](https://github.com/poseidon/typhoon/pull/708))
+
+#### Azure
+
+* Add support for Fedora CoreOS ([#704](https://github.com/poseidon/typhoon/pull/704))
 
 #### DigitalOcean
 
-* Change Container Linux `os_image` to be required. Container Linux users should upload a Flatcar Linux image and set it (**action required**) ([#702](https://github.com/poseidon/typhoon/pull/702))
+* Fix race condition creating firewall allow rules ([#709](https://github.com/poseidon/typhoon/pull/709))
+
+### Flatcar Linux
+
+#### AWS
+
+* Change `os_image` default from `coreos-stable` to `flatcar-stable` ([#702](https://github.com/poseidon/typhoon/pull/702))
+
+#### Azure
+
+* Change `os_image` to be required. Recommend uploading a Flatcar Linux image (**action required**) ([#702](https://github.com/poseidon/typhoon/pull/702))
+* Disable Flatcar Linux Azure Marketplace image [support](https://github.com/poseidon/typhoon/pull/664) (**breaking**, [#707](https://github.com/poseidon/typhoon/pull/707))
+  * Revert to manual uploading until marketplace issue is closed ([#703](https://github.com/poseidon/typhoon/issues/703))
+
+#### Bare-Metal
+
+* Recommend changing [os_channel](https://typhoon.psdn.io/cl/bare-metal/#required) from `coreos-stable` to `flatcar-stable`
+
+#### Google
+
+* Change `os_image` to be required. Recommend uploading a Flatcar Linux image (**action required**) ([#702](https://github.com/poseidon/typhoon/pull/702))
+
+#### DigitalOcean
+
+* Change `os_image` to be required. Recommend uploading a Flatcar Linux image (**action required**) ([#702](https://github.com/poseidon/typhoon/pull/702))
+* Fix race condition creating firewall allow rules ([#709](https://github.com/poseidon/typhoon/pull/709))
 
 ## v1.18.1
 

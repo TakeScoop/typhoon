@@ -19,7 +19,7 @@ resource "aws_lb" "nlb" {
   load_balancer_type = "network"
   internal           = true
 
-  subnets = aws_subnet.public.*.id
+  subnets = aws_subnet.private.*.id
 
   enable_cross_zone_load_balancing = true
 }
@@ -36,35 +36,11 @@ resource "aws_lb_listener" "apiserver-https" {
   }
 }
 
-# Forward HTTP ingress traffic to workers
-resource "aws_lb_listener" "ingress-http" {
-  load_balancer_arn = aws_lb.nlb.arn
-  protocol          = "TCP"
-  port              = 80
-
-  default_action {
-    type             = "forward"
-    target_group_arn = module.workers.target_group_http
-  }
-}
-
-# Forward HTTPS ingress traffic to workers
-resource "aws_lb_listener" "ingress-https" {
-  load_balancer_arn = aws_lb.nlb.arn
-  protocol          = "TCP"
-  port              = 443
-
-  default_action {
-    type             = "forward"
-    target_group_arn = module.workers.target_group_https
-  }
-}
-
 # Target group of controllers
 resource "aws_lb_target_group" "controllers" {
   name        = "${var.cluster_name}-controllers"
   vpc_id      = aws_vpc.network.id
-  target_type = "instance"
+  target_type = "ip"
 
   protocol = "TCP"
   port     = 6443
@@ -88,7 +64,7 @@ resource "aws_lb_target_group_attachment" "controllers" {
   count = var.controller_count
 
   target_group_arn = aws_lb_target_group.controllers.arn
-  target_id        = aws_instance.controllers.*.id[count.index]
+  target_id        = aws_instance.controllers.*.private_ip[count.index]
   port             = 6443
 }
 

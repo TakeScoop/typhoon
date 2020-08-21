@@ -17,14 +17,33 @@ resource "aws_route53_record" "etcds" {
 resource "aws_instance" "controllers" {
   count = var.controller_count
 
-  tags = {
-    Name = "${var.cluster_name}-controller-${count.index}"
-  }
+  tags = map(
+    "Name", "${var.cluster_name}-controller-${count.index}",
+    "kubernetes.io/cluster/${var.cluster_name}", "owned"
+  )
 
   instance_type = var.controller_type
 
-  ami       = data.aws_ami.fedora-coreos.image_id
-  user_data = data.ct_config.controller-ignitions.*.rendered[count.index]
+  ami                  = coalesce(var.ami, data.aws_ami.fedora-coreos.image_id)
+  iam_instance_profile = aws_iam_instance_profile.controller.name
+
+  user_data = <<EOF
+{
+  "ignition": {
+    "version": "3.0.0",
+    "config": {
+      "merge": [
+        {
+          "source": "${var.base_ignition_config_path}"
+        },
+        {
+          "source": "s3://${aws_s3_bucket.ignition_configs.id}/${aws_s3_bucket_object.controller-ignitions.*.id[count.index]}"
+        }
+      ]
+    }
+  }
+}
+EOF
 
   # storage
   root_block_device {
@@ -35,9 +54,11 @@ resource "aws_instance" "controllers" {
   }
 
   # network
-  associate_public_ip_address = true
-  subnet_id                   = aws_subnet.public.*.id[count.index]
-  vpc_security_group_ids      = [aws_security_group.controller.id]
+  subnet_id = aws_subnet.private.*.id[count.index]
+  vpc_security_group_ids = [
+    aws_security_group.controller.id,
+    aws_security_group.bastion_internal.id
+  ]
 
   lifecycle {
     ignore_changes = [
@@ -45,6 +66,13 @@ resource "aws_instance" "controllers" {
       user_data,
     ]
   }
+}
+
+resource "aws_s3_bucket_object" "controller-ignitions" {
+  count   = var.controller_count
+  bucket  = aws_s3_bucket.ignition_configs.id
+  key     = "controllers/${count.index}.json"
+  content = data.ct_config.controller-ignitions.*.rendered[count.index]
 }
 
 # Controller Ignition configs
@@ -68,7 +96,6 @@ data "template_file" "controller-configs" {
     # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
     etcd_initial_cluster   = join(",", data.template_file.etcds.*.rendered)
     kubeconfig             = indent(10, module.bootstrap.kubeconfig-kubelet)
-    ssh_authorized_key     = var.ssh_authorized_key
     cluster_dns_service_ip = cidrhost(var.service_cidr, 10)
     cluster_domain_suffix  = var.cluster_domain_suffix
   }
@@ -85,3 +112,56 @@ data "template_file" "etcds" {
   }
 }
 
+resource "aws_iam_role_policy" "controller_read_base_ignition_config" {
+  name   = "read-base-ignition-config"
+  role   = aws_iam_role.controller.id
+  policy = var.base_ignition_config_read_policy
+}
+
+resource "aws_iam_role_policy" "controller_read_ignition_configs" {
+  name   = "read-ignition-configs"
+  role   = aws_iam_role.controller.id
+  policy = data.aws_iam_policy_document.controller_read_ignition_configs.json
+}
+
+data "aws_iam_policy_document" "controller_read_ignition_configs" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = formatlist("${aws_s3_bucket.ignition_configs.arn}/%s", aws_s3_bucket_object.controller-ignitions.*.id)
+  }
+}
+
+resource "aws_iam_role_policy" "controller_instance_read_ec2" {
+  name   = "instance-read-ec2"
+  role   = aws_iam_role.controller.id
+  policy = data.aws_iam_policy_document.controller_instance_read_ec2.json
+}
+
+data "aws_iam_policy_document" "controller_instance_read_ec2" {
+  statement {
+    actions   = ["ec2:Describe*"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "controller_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "controller" {
+  name               = "${var.cluster_name}-controller"
+  assume_role_policy = data.aws_iam_policy_document.controller_assume_role.json
+}
+
+resource "aws_iam_instance_profile" "controller" {
+  name = "${var.cluster_name}-controller"
+  role = aws_iam_role.controller.id
+}

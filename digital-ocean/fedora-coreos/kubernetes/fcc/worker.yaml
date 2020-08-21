@@ -21,11 +21,12 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Kubelet via Hyperkube (System Container)
+        Description=Kubelet (System Container)
         Requires=afterburn.service
         After=afterburn.service
         Wants=rpc-statd.service
         [Service]
+        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.18.8
         EnvironmentFile=/run/metadata/afterburn
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
@@ -52,10 +53,11 @@ systemd:
           --volume /var/log:/var/log \
           --volume /var/run/lock:/var/run/lock:z \
           --volume /opt/cni/bin:/opt/cni/bin:z \
-          quay.io/poseidon/kubelet:v1.18.2 \
+          $${KUBELET_IMAGE} \
           --anonymous-auth=false \
           --authentication-token-webhook \
           --authorization-mode=Webhook \
+          --bootstrap-kubeconfig=/etc/kubernetes/kubeconfig \
           --cgroup-driver=systemd \
           --cgroups-per-qos=true \
           --enforce-node-allocatable=pods \
@@ -63,15 +65,14 @@ systemd:
           --cluster_dns=${cluster_dns_service_ip} \
           --cluster_domain=${cluster_domain_suffix} \
           --cni-conf-dir=/etc/kubernetes/cni/net.d \
-          --exit-on-lock-contention \
           --healthz-port=0 \
           --hostname-override=$${AFTERBURN_DIGITALOCEAN_IPV4_PRIVATE_0} \
-          --kubeconfig=/etc/kubernetes/kubeconfig \
-          --lock-file=/var/run/lock/kubelet.lock \
+          --kubeconfig=/var/lib/kubelet/kubeconfig \
           --network-plugin=cni \
           --node-labels=node.kubernetes.io/node \
           --pod-manifest-path=/etc/kubernetes/manifests \
           --read-only-port=0 \
+          --rotate-certificates \
           --volume-plugin-dir=/var/lib/kubelet/volumeplugins
         ExecStop=-/usr/bin/podman stop kubelet
         Delegate=yes
@@ -97,7 +98,7 @@ systemd:
         Type=oneshot
         RemainAfterExit=true
         ExecStart=/bin/true
-        ExecStop=/bin/bash -c '/usr/bin/podman run --volume /etc/kubernetes:/etc/kubernetes:ro,z --entrypoint /usr/local/bin/kubectl quay.io/poseidon/kubelet:v1.18.2 --kubeconfig=/etc/kubernetes/kubeconfig delete node $HOSTNAME'
+        ExecStop=/bin/bash -c '/usr/bin/podman run --volume /etc/kubernetes:/etc/kubernetes:ro,z --entrypoint /usr/local/bin/kubectl quay.io/poseidon/kubelet:v1.18.8 --kubeconfig=/etc/kubernetes/kubeconfig delete node $HOSTNAME'
         [Install]
         WantedBy=multi-user.target
 storage:
@@ -108,6 +109,18 @@ storage:
       contents:
         inline: |
           fs.inotify.max_user_watches=16184
+    - path: /etc/sysctl.d/reverse-path-filter.conf
+      contents:
+        inline: |
+          net.ipv4.conf.default.rp_filter=0
+          net.ipv4.conf.*.rp_filter=0
+    - path: /etc/systemd/network/50-flannel.link
+      contents:
+        inline: |
+          [Match]
+          OriginalName=flannel*
+          [Link]
+          MACAddressPolicy=none
     - path: /etc/systemd/system.conf.d/accounting.conf
       contents:
         inline: |

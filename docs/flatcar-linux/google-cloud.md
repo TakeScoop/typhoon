@@ -1,6 +1,6 @@
 # Google Cloud
 
-In this tutorial, we'll create a Kubernetes v1.18.2 cluster on Google Compute Engine with CoreOS Container Linux or Flatcar Linux.
+In this tutorial, we'll create a Kubernetes v1.18.8 cluster on Google Compute Engine with CoreOS Container Linux or Flatcar Linux.
 
 We'll declare a Kubernetes cluster using the Typhoon Terraform module. Then apply the changes to create a network, firewall rules, health checks, controller instances, worker managed instance group, load balancers, and TLS assets.
 
@@ -10,23 +10,15 @@ Controller hosts are provisioned to run an `etcd-member` peer and a `kubelet` se
 
 * Google Cloud Account and Service Account
 * Google Cloud DNS Zone (registered Domain Name or delegated subdomain)
-* Terraform v0.12.6+ and [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) installed locally
+* Terraform v0.13.0+
 
 ## Terraform Setup
 
-Install [Terraform](https://www.terraform.io/downloads.html) v0.12.6+ on your system.
+Install [Terraform](https://www.terraform.io/downloads.html) v0.13.0+ on your system.
 
 ```sh
 $ terraform version
-Terraform v0.12.21
-```
-
-Add the [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
-
-```sh
-wget https://github.com/poseidon/terraform-provider-ct/releases/download/v0.5.0/terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
-mv terraform-provider-ct-v0.5.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.5.0
+Terraform v0.13.0
 ```
 
 Read [concepts](/architecture/concepts/) to learn about Terraform, modules, and organizing resources. Change to your infrastructure repository (e.g. `infra`).
@@ -49,14 +41,24 @@ Configure the Google Cloud provider to use your service account key, project-id,
 
 ```tf
 provider "google" {
-  version     = "3.12.0"
   project     = "project-id"
   region      = "us-central1"
   credentials = file("~/.config/google-cloud/terraform.json")
 }
 
-provider "ct" {
-  version = "0.5.0"
+provider "ct" {}
+
+terraform {
+  required_providers {
+    ct = {
+      source  = "poseidon/ct"
+      version = "0.6.1"
+    }
+    google = {
+      source = "hashicorp/google"
+      version = "3.34.0"
+    }
+  }
 }
 ```
 
@@ -90,7 +92,7 @@ Define a Kubernetes cluster using the module `google-cloud/container-linux/kuber
 
 ```tf
 module "yavin" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes?ref=v1.18.2"
+  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes?ref=v1.18.8"
 
   # Google Cloud
   cluster_name  = "yavin"
@@ -165,9 +167,9 @@ List nodes in the cluster.
 $ export KUBECONFIG=/home/user/.kube/configs/yavin-config
 $ kubectl get nodes
 NAME                                       ROLES    STATUS  AGE  VERSION
-yavin-controller-0.c.example-com.internal  <none>   Ready   6m   v1.18.2
-yavin-worker-jrbf.c.example-com.internal   <none>   Ready   5m   v1.18.2
-yavin-worker-mzdm.c.example-com.internal   <none>   Ready   5m   v1.18.2
+yavin-controller-0.c.example-com.internal  <none>   Ready   6m   v1.18.8
+yavin-worker-jrbf.c.example-com.internal   <none>   Ready   5m   v1.18.8
+yavin-worker-mzdm.c.example-com.internal   <none>   Ready   5m   v1.18.8
 ```
 
 List the pods.
@@ -204,7 +206,7 @@ Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/google-
 | region | Google Cloud region | "us-central1" |
 | dns_zone | Google Cloud DNS zone | "google-cloud.example.com" |
 | dns_zone_name | Google Cloud DNS zone name | "example-zone" |
-| os_image | Container Linux image for compute instances | "flatcar-linux-2303-4-0", coreos-stable, coreos-beta, coreos-alpha |
+| os_image | Container Linux image for compute instances | "flatcar-linux-2303-4-0" |
 | ssh_authorized_key | SSH public key for user 'core' | "ssh-rsa AAAAB3NZ..." |
 
 Check the list of valid [regions](https://cloud.google.com/compute/docs/regions-zones/regions-zones) and list Container Linux [images](https://cloud.google.com/compute/docs/images) with `gcloud compute images list | grep coreos`.
@@ -238,7 +240,7 @@ resource "google_dns_managed_zone" "zone-for-clusters" {
 | worker_preemptible | If enabled, Compute Engine will terminate workers randomly within 24 hours | false | true |
 | controller_snippets | Controller Container Linux Config snippets | [] | [example](/advanced/customization/) |
 | worker_snippets | Worker Container Linux Config snippets | [] | [example](/advanced/customization/) |
-| networking | Choice of networking provider | "calico" | "calico" or "flannel" |
+| networking | Choice of networking provider | "calico" | "calico" or "cilium" or "flannel" |
 | pod_cidr | CIDR IPv4 range to assign to Kubernetes pods | "10.2.0.0/16" | "10.22.0.0/16" |
 | service_cidr | CIDR IPv4 range to assign to Kubernetes services | "10.3.0.0/16" | "10.3.0.0/24" |
 | worker_node_labels | List of initial worker node labels | [] | ["worker-pool=default"] |

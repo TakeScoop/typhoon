@@ -46,9 +46,10 @@ variable "worker_type" {
   default     = "n1-standard-1"
 }
 
-variable "os_image" {
+variable "os_stream" {
   type        = string
-  description = "Fedora CoreOS image for compute instances (e.g. fedora-coreos)"
+  description = "Fedora CoreOS stream for compute instances (e.g. stable, testing, next)"
+  default     = "stable"
 }
 
 variable "disk_size" {

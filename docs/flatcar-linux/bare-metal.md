@@ -1,6 +1,6 @@
 # Bare-Metal
 
-In this tutorial, we'll network boot and provision a Kubernetes v1.18.2 cluster on bare-metal with CoreOS Container Linux or Flatcar Linux.
+In this tutorial, we'll network boot and provision a Kubernetes v1.18.8 cluster on bare-metal with CoreOS Container Linux or Flatcar Linux.
 
 First, we'll deploy a [Matchbox](https://github.com/poseidon/matchbox) service and setup a network boot environment. Then, we'll declare a Kubernetes cluster using the Typhoon Terraform module and power on machines. On PXE boot, machines will install Container Linux to disk, reboot into the disk install, and provision themselves as Kubernetes controllers or workers via Ignition.
 
@@ -12,7 +12,7 @@ Controller hosts are provisioned to run an `etcd-member` peer and a `kubelet` se
 * PXE-enabled [network boot](https://coreos.com/matchbox/docs/latest/network-setup.html) environment (with HTTPS support)
 * Matchbox v0.6+ deployment with API enabled
 * Matchbox credentials `client.crt`, `client.key`, `ca.crt`
-* Terraform v0.12.6+, [terraform-provider-matchbox](https://github.com/poseidon/terraform-provider-matchbox), and [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) installed locally
+* Terraform v0.13.0+
 
 ## Machines
 
@@ -107,27 +107,11 @@ Read about the [many ways](https://coreos.com/matchbox/docs/latest/network-setup
 
 ## Terraform Setup
 
-Install [Terraform](https://www.terraform.io/downloads.html) v0.12.6+ on your system.
+Install [Terraform](https://www.terraform.io/downloads.html) v0.13.0+ on your system.
 
 ```sh
 $ terraform version
-Terraform v0.12.21
-```
-
-Add the [terraform-provider-matchbox](https://github.com/poseidon/terraform-provider-matchbox) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
-
-```sh
-wget https://github.com/poseidon/terraform-provider-matchbox/releases/download/v0.3.0/terraform-provider-matchbox-v0.3.0-linux-amd64.tar.gz
-tar xzf terraform-provider-matchbox-v0.3.0-linux-amd64.tar.gz
-mv terraform-provider-matchbox-v0.3.0-linux-amd64/terraform-provider-matchbox ~/.terraform.d/plugins/terraform-provider-matchbox_v0.3.0
-```
-
-Add the [terraform-provider-ct](https://github.com/poseidon/terraform-provider-ct) plugin binary for your system to `~/.terraform.d/plugins/`, noting the final name.
-
-```sh
-wget https://github.com/poseidon/terraform-provider-ct/releases/download/v0.5.0/terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
-tar xzf terraform-provider-ct-v0.5.0-linux-amd64.tar.gz
-mv terraform-provider-ct-v0.5.0-linux-amd64/terraform-provider-ct ~/.terraform.d/plugins/terraform-provider-ct_v0.5.0
+Terraform v0.13.0
 ```
 
 Read [concepts](/architecture/concepts/) to learn about Terraform, modules, and organizing resources. Change to your infrastructure repository (e.g. `infra`).
@@ -142,15 +126,25 @@ Configure the Matchbox provider to use your Matchbox API endpoint and client cer
 
 ```tf
 provider "matchbox" {
-  version     = "0.3.0"
   endpoint    = "matchbox.example.com:8081"
   client_cert = file("~/.config/matchbox/client.crt")
   client_key  = file("~/.config/matchbox/client.key")
   ca          = file("~/.config/matchbox/ca.crt")
 }
 
-provider "ct" {
-  version = "0.5.0"
+provider "ct" {}
+
+terraform {
+  required_providers {
+    ct = {
+      source  = "poseidon/ct"
+      version = "0.6.1"
+    }
+    matchbox = {
+      source = "poseidon/matchbox"
+      version = "0.4.1"
+    }
+  }
 }
 ```
 
@@ -160,7 +154,7 @@ Define a Kubernetes cluster using the module `bare-metal/container-linux/kuberne
 
 ```tf
 module "mercury" {
-  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.18.2"
+  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.18.8"
 
   # bare-metal
   cluster_name            = "mercury"
@@ -299,9 +293,9 @@ List nodes in the cluster.
 $ export KUBECONFIG=/home/user/.kube/configs/mercury-config
 $ kubectl get nodes
 NAME                STATUS  ROLES   AGE  VERSION
-node1.example.com   Ready   <none>  10m  v1.18.2
-node2.example.com   Ready   <none>  10m  v1.18.2
-node3.example.com   Ready   <none>  10m  v1.18.2
+node1.example.com   Ready   <none>  10m  v1.18.8
+node2.example.com   Ready   <none>  10m  v1.18.8
+node3.example.com   Ready   <none>  10m  v1.18.8
 ```
 
 List the pods.
@@ -336,7 +330,7 @@ Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/bare-me
 |:-----|:------------|:--------|
 | cluster_name | Unique cluster name | "mercury" |
 | matchbox_http_endpoint | Matchbox HTTP read-only endpoint | "http://matchbox.example.com:port" |
-| os_channel | Channel for a Container Linux derivative | coreos-stable, coreos-beta, coreos-alpha, flatcar-stable, flatcar-beta, flatcar-alpha, flatcar-edge |
+| os_channel | Channel for a Container Linux derivative | flatcar-stable, flatcar-beta, flatcar-alpha, flatcar-edge |
 | os_version | Version for a Container Linux derivative to PXE and install | "2345.3.1" |
 | k8s_domain_name | FQDN resolving to the controller(s) nodes. Workers and kubectl will communicate with this endpoint | "myk8s.example.com" |
 | ssh_authorized_key | SSH public key for user 'core' | "ssh-rsa AAAAB3Nz..." |
@@ -350,7 +344,7 @@ Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/bare-me
 | download_protocol | Protocol iPXE uses to download the kernel and initrd. iPXE must be compiled with [crypto](https://ipxe.org/crypto) support for https. Unused if cached_install is true | "https" | "http" |
 | cached_install | PXE boot and install from the Matchbox `/assets` cache. Admin MUST have downloaded Container Linux or Flatcar images into the cache | false | true |
 | install_disk | Disk device where Container Linux should be installed | "/dev/sda" | "/dev/sdb" |
-| networking | Choice of networking provider | "calico" | "calico" or "flannel" |
+| networking | Choice of networking provider | "calico" | "calico" or "cilium" or "flannel" |
 | network_mtu | CNI interface MTU (calico-only) | 1480 | - |
 | snippets | Map from machine names to lists of Container Linux Config snippets | {} | [examples](/advanced/customization/) |
 | network_ip_autodetection_method | Method to detect host IPv4 address (calico-only) | "first-found" | "can-reach=10.0.0.1" |

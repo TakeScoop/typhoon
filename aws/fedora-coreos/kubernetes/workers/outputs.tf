@@ -8,3 +8,12 @@ output "target_group_https" {
   value       = aws_lb_target_group.workers-https.arn
 }
 
+output "instance_role" {
+  description = "IAM role ARN attached to instances via instance profile"
+  value       = aws_iam_role.worker.arn
+}
+
+output "autoscaling_group" {
+  description = "Name of the workers autoscaling group"
+  value       = aws_autoscaling_group.workers.name
+}

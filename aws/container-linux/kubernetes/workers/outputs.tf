@@ -17,3 +17,4 @@ output "autoscaling_group" {
   description = "Name of the workers autoscaling group"
   value       = aws_autoscaling_group.workers.name
 }
+

@@ -24,21 +24,22 @@ resource "azurerm_linux_virtual_machine_scale_set" "workers" {
     caching              = "ReadWrite"
   }
 
+  # CoreOS Container Linux or Flatcar Container Linux
   source_image_reference {
     publisher = local.flavor == "flatcar" ? "Kinvolk" : "CoreOS"
-    offer     = local.flavor == "flatcar" ? "flatcar-container-linux" : "CoreOS"
+    offer     = local.flavor == "flatcar" ? "flatcar-container-linux-free" : "CoreOS"
     sku       = local.channel
     version   = "latest"
   }
 
-  # Gross hack just for Flatcar Linux
+  # Gross hack for Flatcar Linux
   dynamic "plan" {
     for_each = local.flavor == "flatcar" ? [1] : []
 
     content {
       name      = local.channel
       publisher = "kinvolk"
-      product   = "flatcar-container-linux"
+      product   = "flatcar-container-linux-free"
     }
   }
 
@@ -96,9 +97,9 @@ resource "azurerm_monitor_autoscale_setting" "workers" {
 
 # Worker Ignition configs
 data "ct_config" "worker-ignition" {
-  content      = data.template_file.worker-config.rendered
-  pretty_print = false
-  snippets     = var.snippets
+  content  = data.template_file.worker-config.rendered
+  strict   = true
+  snippets = var.snippets
 }
 
 # Worker Container Linux configs
@@ -110,6 +111,7 @@ data "template_file" "worker-config" {
     ssh_authorized_key     = var.ssh_authorized_key
     cluster_dns_service_ip = cidrhost(var.service_cidr, 10)
     cluster_domain_suffix  = var.cluster_domain_suffix
+    cgroup_driver          = local.flavor == "flatcar" && local.channel == "edge" ? "systemd" : "cgroupfs"
     node_labels            = join(",", var.node_labels)
   }
 }

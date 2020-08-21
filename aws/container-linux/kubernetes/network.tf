@@ -139,4 +139,3 @@ resource "aws_nat_gateway" "nat" {
 resource "aws_egress_only_internet_gateway" "egress_igw" {
   vpc_id = aws_vpc.network.id
 }
-

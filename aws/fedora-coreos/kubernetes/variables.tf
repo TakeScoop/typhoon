@@ -41,9 +41,9 @@ variable "worker_type" {
   default     = "t3.small"
 }
 
-variable "os_image" {
+variable "os_stream" {
   type        = string
-  description = "AMI channel for Fedora CoreOS (not yet used)"
+  description = "Fedora CoreOs image stream for instances (e.g. stable, testing, next)"
   default     = "stable"
 }
 
@@ -89,12 +89,13 @@ variable "worker_snippets" {
   default     = []
 }
 
-# configuration
-
-variable "ssh_authorized_key" {
-  type        = string
-  description = "SSH public key for user 'core'"
+variable "bastion_snippets" {
+  type        = list(string)
+  description = "Bastion Fedora CoreOS Config snippets"
+  default     = []
 }
+
+# configuration
 
 variable "asset_dir" {
   type        = string
@@ -161,3 +162,66 @@ variable "cluster_domain_suffix" {
   default     = "cluster.local"
 }
 
+# Scoop variables
+
+variable "apiserver_aliases" {
+  type        = list(string)
+  description = "List of alternate DNS names that can be used to address the Kubernetes API"
+  default     = []
+}
+
+variable "apiserver_arguments" {
+  type        = list(string)
+  default     = []
+  description = "Custom arguments to pass to the kube-apiserver"
+}
+
+variable "bastion_type" {
+  type        = string
+  default     = "t2.micro"
+  description = "Bastion EC2 instance type"
+}
+
+variable "bastion_count" {
+  type        = number
+  default     = 1
+  description = "Number of bastion hosts to run"
+}
+
+variable "ami" {
+  type        = string
+  description = "Custom AMI to use to launch instances. When no value is set for a role, the latest stable CoreOS AMI is used."
+  default     = ""
+}
+
+variable "base_ignition_config_path" {
+  type        = string
+  description = "The full path of the S3 object that stores base ignition config"
+}
+
+variable "base_ignition_config_read_policy" {
+  type        = string
+  description = "The contents of the IAM policy that allows reading base ignition config"
+}
+
+variable "ssh_user" {
+  type        = string
+  description = "Username for provisioning via SSH"
+}
+
+variable "ssh_private_key" {
+  type        = string
+  description = "SSH private key to use with provisioners"
+}
+
+variable "subnet_tags_private" {
+  type        = map(string)
+  description = "Tags to apply to private subnets"
+  default     = {}
+}
+
+variable "subnet_tags_public" {
+  type        = map(string)
+  description = "Tags to apply to public subnets"
+  default     = {}
+}

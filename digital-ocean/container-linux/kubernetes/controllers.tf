@@ -46,9 +46,10 @@ resource "digitalocean_droplet" "controllers" {
   size  = var.controller_type
 
   # network
-  # only official DigitalOcean images support IPv6
-  ipv6               = local.is_official_image
   private_networking = true
+  vpc_uuid           = digitalocean_vpc.network.id
+  # TODO: Only official DigitalOcean images support IPv6
+  ipv6 = false
 
   user_data = data.ct_config.controller-ignitions.*.rendered[count.index]
   ssh_keys  = var.ssh_fingerprints
@@ -69,10 +70,10 @@ resource "digitalocean_tag" "controllers" {
 
 # Controller Ignition configs
 data "ct_config" "controller-ignitions" {
-  count        = var.controller_count
-  content      = data.template_file.controller-configs.*.rendered[count.index]
-  pretty_print = false
-  snippets     = var.controller_snippets
+  count    = var.controller_count
+  content  = data.template_file.controller-configs.*.rendered[count.index]
+  strict   = true
+  snippets = var.controller_snippets
 }
 
 # Controller Container Linux configs
