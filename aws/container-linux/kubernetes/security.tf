@@ -136,28 +136,6 @@ resource "aws_security_group_rule" "controller-apiserver" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 
-# Allow Prometheus to scrape kube-scheduler
-resource "aws_security_group_rule" "controller-scheduler-metrics" {
-  security_group_id = aws_security_group.controller.id
-
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 10251
-  to_port                  = 10251
-  source_security_group_id = aws_security_group.worker.id
-}
-
-# Allow Prometheus to scrape kube-controller-manager
-resource "aws_security_group_rule" "controller-manager-metrics" {
-  security_group_id = aws_security_group.controller.id
-
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 10252
-  to_port                  = 10252
-  source_security_group_id = aws_security_group.worker.id
-}
-
 # Linux VXLAN default
 resource "aws_security_group_rule" "controller-linux-vxlan" {
   count = var.networking == "cilium" ? 1 : 0
