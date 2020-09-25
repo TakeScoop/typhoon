@@ -111,7 +111,7 @@ data "template_file" "worker-config" {
     kubeconfig             = indent(10, var.kubeconfig)
     cluster_dns_service_ip = cidrhost(var.service_cidr, 10)
     cluster_domain_suffix  = var.cluster_domain_suffix
-    cgroup_driver          = local.flavor == "flatcar" && local.channel == "edge" ? "systemd" : "cgroupfs"
+    cgroup_driver          = local.channel == "edge" ? "systemd" : "cgroupfs"
     node_labels            = join(",", var.node_labels)
   }
 }
