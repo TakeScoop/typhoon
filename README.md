@@ -20,7 +20,7 @@ Typhoon is a minimal and free Kubernetes distribution.
 
 * Minimal, stable base Kubernetes distribution
 * Declarative infrastructure and configuration
-* [Free](#social-contract) (freedom and cost) and privacy-respecting
+* [Free](#social-contract) (freedom and cost)hjlhjhljh and privacy-respecting
 * Practical for labs, datacenters, and clouds
 
 Typhoon distributes upstream Kubernetes, architectural conventions, and cluster addons, much like a GNU/Linux distribution provides the Linux kernel and userspace components.
