@@ -173,7 +173,6 @@ resource "aws_security_group_rule" "controller-node-exporter" {
   source_security_group_id = aws_security_group.worker.id
 }
 
-
 # Allow Prometheus to scrape kube-proxy
 resource "aws_security_group_rule" "kube-proxy-metrics" {
   security_group_id = aws_security_group.controller.id

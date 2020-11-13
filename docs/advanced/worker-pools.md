@@ -4,37 +4,62 @@ Typhoon AWS, Azure, and Google Cloud allow additional groups of workers to be de
 
 Internal Terraform Modules:
 
-* `aws/container-linux/kubernetes/workers`
+* `aws/flatcar-linux/kubernetes/workers`
 * `aws/fedora-coreos/kubernetes/workers`
-* `azure/container-linux/kubernetes/workers`
+* `azure/flatcar-linux/kubernetes/workers`
 * `azure/fedora-coreos/kubernetes/workers`
-* `google-cloud/container-linux/kubernetes/workers`
+* `google-cloud/flatcar-linux/kubernetes/workers`
 * `google-cloud/fedora-coreos/kubernetes/workers`
 
 ## AWS
 
 Create a cluster following the AWS [tutorial](../flatcar-linux/aws.md#cluster). Define a worker pool using the AWS internal `workers` module.
 
-```tf
-module "tempest-worker-pool" {
-  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes/workers?ref=v1.14.3"
+=== "Fedora CoreOS"
 
-  # AWS
-  vpc_id          = module.tempest.vpc_id
-  subnet_ids      = module.tempest.subnet_ids
-  security_groups = module.tempest.worker_security_groups
+    ```tf
+    module "tempest-worker-pool" {
+      source = "git::https://github.com/poseidon/typhoon//aws/fedora-coreos/kubernetes/workers?ref=v1.19.4"
 
-  # configuration
-  name               = "tempest-pool"
-  kubeconfig         = module.tempest.kubeconfig
-  ssh_authorized_key = var.ssh_authorized_key
+      # AWS
+      vpc_id          = module.tempest.vpc_id
+      subnet_ids      = module.tempest.subnet_ids
+      security_groups = module.tempest.worker_security_groups
 
-  # optional
-  worker_count  = 2
-  instance_type = "m5.large"
-  os_image      = "flatcar-beta"
-}
-```
+      # configuration
+      name               = "tempest-pool"
+      kubeconfig         = module.tempest.kubeconfig
+      ssh_authorized_key = var.ssh_authorized_key
+
+      # optional
+      worker_count  = 2
+      instance_type = "m5.large"
+      os_stream     = "next"
+    }
+    ```
+
+=== "Flatcar Linux"
+
+    ```tf
+    module "tempest-worker-pool" {
+      source = "git::https://github.com/poseidon/typhoon//aws/flatcar-linux/kubernetes/workers?ref=v1.19.4"
+
+      # AWS
+      vpc_id          = module.tempest.vpc_id
+      subnet_ids      = module.tempest.subnet_ids
+      security_groups = module.tempest.worker_security_groups
+
+      # configuration
+      name               = "tempest-pool"
+      kubeconfig         = module.tempest.kubeconfig
+      ssh_authorized_key = var.ssh_authorized_key
+
+      # optional
+      worker_count  = 2
+      instance_type = "m5.large"
+      os_image      = "flatcar-beta"
+    }
+    ```
 
 Apply the change.
 
@@ -46,7 +71,7 @@ Verify an auto-scaling group of workers joins the cluster within a few minutes.
 
 ### Variables
 
-The AWS internal `workers` module supports a number of [variables](https://github.com/poseidon/typhoon/blob/master/aws/container-linux/kubernetes/workers/variables.tf).
+The AWS internal `workers` module supports a number of [variables](https://github.com/poseidon/typhoon/blob/master/aws/flatcar-linux/kubernetes/workers/variables.tf).
 
 #### Required
 
@@ -65,13 +90,13 @@ The AWS internal `workers` module supports a number of [variables](https://githu
 |:-----|:------------|:--------|:--------|
 | worker_count | Number of instances | 1 | 3 |
 | instance_type | EC2 instance type | "t3.small" | "t3.medium" |
-| os_image | AMI channel for a Container Linux derivative | "flatcar-stable" | flatcar-stable, flatcar-beta, flatcar-alph, flatcar-edge |
+| os_image | AMI channel for a Container Linux derivative | "flatcar-stable" | flatcar-stable, flatcar-beta, flatcar-alpha, flatcar-edge |
 | os_stream | Fedora CoreOS stream for compute instances | "stable" | "testing", "next" |
 | disk_size | Size of the EBS volume in GB | 40 | 100 |
 | disk_type | Type of the EBS volume | "gp2" | standard, gp2, io1 |
 | disk_iops | IOPS of the EBS volume | 0 (i.e. auto) | 400 |
 | spot_price | Spot price in USD for worker instances or 0 to use on-demand instances | 0 | 0.10 |
-| snippets | Container Linux Config snippets | [] | [examples](/advanced/customization/) |
+| snippets | Fedora CoreOS or Container Linux Config snippets | [] | [examples](/advanced/customization/) |
 | service_cidr | Must match `service_cidr` of cluster | "10.3.0.0/16" | "10.3.0.0/24" |
 | node_labels | List of initial node labels | [] | ["worker-pool=foo"] |
 
@@ -81,28 +106,57 @@ Check the list of valid [instance types](https://aws.amazon.com/ec2/instance-typ
 
 Create a cluster following the Azure [tutorial](../flatcar-linux/azure.md#cluster). Define a worker pool using the Azure internal `workers` module.
 
-```tf
-module "ramius-worker-pool" {
-  source = "git::https://github.com/poseidon/typhoon//azure/container-linux/kubernetes/workers?ref=v1.18.8"
+=== "Fedora CoreOS"
 
-  # Azure
-  region                  = module.ramius.region
-  resource_group_name     = module.ramius.resource_group_name
-  subnet_id               = module.ramius.subnet_id
-  security_group_id       = module.ramius.security_group_id
-  backend_address_pool_id = module.ramius.backend_address_pool_id
+    ```tf
+    module "ramius-worker-pool" {
+      source = "git::https://github.com/poseidon/typhoon//azure/fedora-coreos/kubernetes/workers?ref=v1.19.4"
 
-  # configuration
-  name               = "ramius-spot"
-  kubeconfig         = module.ramius.kubeconfig
-  ssh_authorized_key = var.ssh_authorized_key
+      # Azure
+      region                  = module.ramius.region
+      resource_group_name     = module.ramius.resource_group_name
+      subnet_id               = module.ramius.subnet_id
+      security_group_id       = module.ramius.security_group_id
+      backend_address_pool_id = module.ramius.backend_address_pool_id
 
-  # optional
-  worker_count = 2
-  vm_type      = "Standard_F4"
-  priority     = "Spot"
-}
-```
+      # configuration
+      name               = "ramius-spot"
+      kubeconfig         = module.ramius.kubeconfig
+      ssh_authorized_key = var.ssh_authorized_key
+
+      # optional
+      worker_count = 2
+      vm_type      = "Standard_F4"
+      priority     = "Spot"
+      os_image     = "/subscriptions/some/path/Microsoft.Compute/images/fedora-coreos-31.20200323.3.2"
+    }
+    ```
+
+=== "Flatcar Linux"
+
+    ```tf
+    module "ramius-worker-pool" {
+      source = "git::https://github.com/poseidon/typhoon//azure/flatcar-linux/kubernetes/workers?ref=v1.19.4"
+
+      # Azure
+      region                  = module.ramius.region
+      resource_group_name     = module.ramius.resource_group_name
+      subnet_id               = module.ramius.subnet_id
+      security_group_id       = module.ramius.security_group_id
+      backend_address_pool_id = module.ramius.backend_address_pool_id
+
+      # configuration
+      name               = "ramius-spot"
+      kubeconfig         = module.ramius.kubeconfig
+      ssh_authorized_key = var.ssh_authorized_key
+
+      # optional
+      worker_count = 2
+      vm_type      = "Standard_F4"
+      priority     = "Spot"
+      os_image     = "flatcar-beta"
+    }
+    ```
 
 Apply the change.
 
@@ -114,7 +168,7 @@ Verify a scale set of workers joins the cluster within a few minutes.
 
 ### Variables
 
-The Azure internal `workers` module supports a number of [variables](https://github.com/poseidon/typhoon/blob/master/azure/container-linux/kubernetes/workers/variables.tf).
+The Azure internal `workers` module supports a number of [variables](https://github.com/poseidon/typhoon/blob/master/azure/flatcar-linux/kubernetes/workers/variables.tf).
 
 #### Required
 
@@ -147,27 +201,53 @@ Check the list of valid [machine types](https://azure.microsoft.com/en-us/pricin
 
 Create a cluster following the Google Cloud [tutorial](../flatcar-linux/google-cloud.md#cluster). Define a worker pool using the Google Cloud internal `workers` module.
 
-```tf
-module "yavin-worker-pool" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes/workers?ref=v1.18.8"
+=== "Fedora CoreOS"
 
-  # Google Cloud
-  region       = "europe-west2"
-  network      = module.yavin.network_name
-  cluster_name = "yavin"
+    ```tf
+    module "yavin-worker-pool" {
+      source = "git::https://github.com/poseidon/typhoon//google-cloud/fedora-coreos/kubernetes/workers?ref=v1.19.4"
 
-  # configuration
-  name               = "yavin-16x"
-  kubeconfig         = module.yavin.kubeconfig
-  ssh_authorized_key = var.ssh_authorized_key
+      # Google Cloud
+      region       = "europe-west2"
+      network      = module.yavin.network_name
+      cluster_name = "yavin"
 
-  # optional
-  worker_count = 2
-  machine_type = "n1-standard-16"
-  os_image     = "coreos-beta"
-  preemptible  = true
-}
-```
+      # configuration
+      name               = "yavin-16x"
+      kubeconfig         = module.yavin.kubeconfig
+      ssh_authorized_key = var.ssh_authorized_key
+
+      # optional
+      worker_count = 2
+      machine_type = "n1-standard-16"
+      os_stream    = "testing"
+      preemptible  = true
+    }
+    ```
+
+=== "Flatcar Linux"
+
+    ```tf
+    module "yavin-worker-pool" {
+      source = "git::https://github.com/poseidon/typhoon//google-cloud/flatcar-linux/kubernetes/workers?ref=v1.19.4"
+
+      # Google Cloud
+      region       = "europe-west2"
+      network      = module.yavin.network_name
+      cluster_name = "yavin"
+
+      # configuration
+      name               = "yavin-16x"
+      kubeconfig         = module.yavin.kubeconfig
+      ssh_authorized_key = var.ssh_authorized_key
+
+      # optional
+      worker_count = 2
+      machine_type = "n1-standard-16"
+      os_image     = "flatcar-linux-2303-4-0"    # custom
+      preemptible  = true
+    }
+    ```
 
 Apply the change.
 
@@ -180,16 +260,16 @@ Verify a managed instance group of workers joins the cluster within a few minute
 ```
 $ kubectl get nodes
 NAME                                             STATUS   AGE    VERSION
-yavin-controller-0.c.example-com.internal        Ready    6m     v1.18.8
-yavin-worker-jrbf.c.example-com.internal         Ready    5m     v1.18.8
-yavin-worker-mzdm.c.example-com.internal         Ready    5m     v1.18.8
-yavin-16x-worker-jrbf.c.example-com.internal     Ready    3m     v1.18.8
-yavin-16x-worker-mzdm.c.example-com.internal     Ready    3m     v1.18.8
+yavin-controller-0.c.example-com.internal        Ready    6m     v1.19.4
+yavin-worker-jrbf.c.example-com.internal         Ready    5m     v1.19.4
+yavin-worker-mzdm.c.example-com.internal         Ready    5m     v1.19.4
+yavin-16x-worker-jrbf.c.example-com.internal     Ready    3m     v1.19.4
+yavin-16x-worker-mzdm.c.example-com.internal     Ready    3m     v1.19.4
 ```
 
 ### Variables
 
-The Google Cloud internal `workers` module supports a number of [variables](https://github.com/poseidon/typhoon/blob/master/google-cloud/container-linux/kubernetes/workers/variables.tf).
+The Google Cloud internal `workers` module supports a number of [variables](https://github.com/poseidon/typhoon/blob/master/google-cloud/flatcar-linux/kubernetes/workers/variables.tf).
 
 #### Required
 

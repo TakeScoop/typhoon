@@ -1,11 +1,10 @@
 # Kubernetes assets (kubeconfig, manifests)
 module "bootstrap" {
-  source = "git::https://github.com/takescoop/terraform-render-bootstrap.git?ref=d3132edba9f84ad210376f0632d435c08d6ce3e4"
+  source = "git::https://github.com/takescoop/terraform-render-bootstrap.git?ref=473879014fae33168814e25abf47055bf879972a"
 
   cluster_name          = var.cluster_name
   api_servers           = concat(list(format("%s.%s", var.cluster_name, var.dns_zone)), var.apiserver_aliases)
   etcd_servers          = aws_route53_record.etcds.*.fqdn
-  asset_dir             = var.asset_dir
   networking            = var.networking
   network_mtu           = var.network_mtu
   pod_cidr              = var.pod_cidr

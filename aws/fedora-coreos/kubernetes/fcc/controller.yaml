@@ -1,6 +1,6 @@
 ---
 variant: fcos
-version: 1.0.0
+version: 1.1.0
 systemd:
   units:
     - name: etcd-member.service
@@ -8,28 +8,25 @@ systemd:
       contents: |
         [Unit]
         Description=etcd (System Container)
-        Documentation=https://github.com/coreos/etcd
+        Documentation=https://github.com/etcd-io/etcd
         Wants=network-online.target network.target
         After=network-online.target
         [Service]
-        # https://github.com/opencontainers/runc/pull/1807
-        # Type=notify
-        # NotifyAccess=exec
+        Environment=ETCD_IMAGE=quay.io/coreos/etcd:v3.4.12
         Type=exec
-        Restart=on-failure
-        RestartSec=10s
-        TimeoutStartSec=0
-        LimitNOFILE=40000
         ExecStartPre=/bin/mkdir -p /var/lib/etcd
         ExecStartPre=-/usr/bin/podman rm etcd
-        #--volume $${NOTIFY_SOCKET}:/run/systemd/notify \
         ExecStart=/usr/bin/podman run --name etcd \
           --env-file /etc/etcd/etcd.env \
           --network host \
           --volume /var/lib/etcd:/var/lib/etcd:rw,Z \
           --volume /etc/ssl/etcd:/etc/ssl/certs:ro,Z \
-          quay.io/coreos/etcd:v3.4.10
+          $${ETCD_IMAGE}
         ExecStop=/usr/bin/podman stop etcd
+        Restart=on-failure
+        RestartSec=10s
+        TimeoutStartSec=0
+        LimitNOFILE=40000
         [Install]
         WantedBy=multi-user.target
     - name: docker.service
@@ -55,7 +52,7 @@ systemd:
         Description=Kubelet (System Container)
         Wants=rpc-statd.service
         [Service]
-        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.18.8
+        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.19.4
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
         ExecStartPre=/bin/mkdir -p /opt/cni/bin
@@ -69,13 +66,10 @@ systemd:
           --network host \
           --volume /etc/kubernetes:/etc/kubernetes:ro,z \
           --volume /usr/lib/os-release:/etc/os-release:ro \
-          --volume /etc/ssl/certs:/etc/ssl/certs:ro \
           --volume /lib/modules:/lib/modules:ro \
           --volume /run:/run \
           --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
           --volume /sys/fs/cgroup/systemd:/sys/fs/cgroup/systemd \
-          --volume /etc/pki/tls/certs:/etc/pki/tls/certs:ro \
-          --volume /etc/pki/ca-trust/extracted:/etc/pki/ca-trust/extracted:ro \
           --volume /var/lib/calico:/var/lib/calico:ro \
           --volume /var/lib/docker:/var/lib/docker \
           --volume /var/lib/kubelet:/var/lib/kubelet:rshared,z \
@@ -126,7 +120,7 @@ systemd:
             --volume /opt/bootstrap/assets:/assets:ro,Z \
             --volume /opt/bootstrap/apply:/apply:ro,Z \
             --entrypoint=/apply \
-            quay.io/poseidon/kubelet:v1.18.8
+            quay.io/poseidon/kubelet:v1.19.4
         ExecStartPost=/bin/touch /opt/bootstrap/bootstrap.done
         ExecStartPost=-/usr/bin/podman stop bootstrap
 storage:
@@ -205,8 +199,6 @@ storage:
       mode: 0644
       contents:
         inline: |
-          # TODO: Use a systemd dropin once podman v1.4.5 is avail.
-          NOTIFY_SOCKET=/run/systemd/notify
           ETCD_NAME=${etcd_name}
           ETCD_DATA_DIR=/var/lib/etcd
           ETCD_ADVERTISE_CLIENT_URLS=https://${etcd_domain}:2379

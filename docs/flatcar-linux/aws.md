@@ -1,6 +1,6 @@
 # AWS
 
-In this tutorial, we'll create a Kubernetes v1.18.8 cluster on AWS with CoreOS Container Linux or Flatcar Linux.
+In this tutorial, we'll create a Kubernetes v1.19.4 cluster on AWS with Flatcar Linux.
 
 We'll declare a Kubernetes cluster using the Typhoon Terraform module. Then apply the changes to create a VPC, gateway, subnets, security groups, controller instances, worker auto-scaling group, network load balancer, and TLS assets.
 
@@ -55,7 +55,7 @@ terraform {
     }
     aws = {
       source = "hashicorp/aws"
-      version = "3.2.0"
+      version = "3.11.0"
     }
   }
 }
@@ -68,11 +68,11 @@ Additional configuration options are described in the `aws` provider [docs](http
 
 ## Cluster
 
-Define a Kubernetes cluster using the module `aws/container-linux/kubernetes`.
+Define a Kubernetes cluster using the module `aws/flatcar-linux/kubernetes`.
 
 ```tf
 module "tempest" {
-  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes?ref=v1.18.8"
+  source = "git::https://github.com/poseidon/typhoon//aws/flatcar-linux/kubernetes?ref=v1.19.4"
 
   # AWS
   cluster_name = "tempest"
@@ -88,7 +88,7 @@ module "tempest" {
 }
 ```
 
-Reference the [variables docs](#variables) or the [variables.tf](https://github.com/poseidon/typhoon/blob/master/aws/container-linux/kubernetes/variables.tf) source.
+Reference the [variables docs](#variables) or the [variables.tf](https://github.com/poseidon/typhoon/blob/master/aws/flatcar-linux/kubernetes/variables.tf) source.
 
 ## ssh-agent
 
@@ -145,9 +145,9 @@ List nodes in the cluster.
 $ export KUBECONFIG=/home/user/.kube/configs/tempest-config
 $ kubectl get nodes
 NAME           STATUS  ROLES   AGE  VERSION
-ip-10-0-3-155  Ready   <none>  10m  v1.18.8
-ip-10-0-26-65  Ready   <none>  10m  v1.18.8
-ip-10-0-41-21  Ready   <none>  10m  v1.18.8
+ip-10-0-3-155  Ready   <none>  10m  v1.19.4
+ip-10-0-26-65  Ready   <none>  10m  v1.19.4
+ip-10-0-41-21  Ready   <none>  10m  v1.19.4
 ```
 
 List the pods.
@@ -174,7 +174,7 @@ Learn about [maintenance](/topics/maintenance/) and [addons](/addons/overview/).
 
 ## Variables
 
-Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/aws/container-linux/kubernetes/variables.tf) source.
+Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/aws/flatcar-linux/kubernetes/variables.tf) source.
 
 ### Required
 

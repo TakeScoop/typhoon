@@ -1,6 +1,6 @@
 ---
 variant: fcos
-version: 1.0.0
+version: 1.1.0
 systemd:
   units:
     - name: docker.service
@@ -24,7 +24,7 @@ systemd:
         Description=Kubelet (System Container)
         Wants=rpc-statd.service
         [Service]
-        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.18.8
+        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.19.4
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/cni/net.d
         ExecStartPre=/bin/mkdir -p /etc/kubernetes/manifests
         ExecStartPre=/bin/mkdir -p /opt/cni/bin
@@ -38,12 +38,10 @@ systemd:
           --network host \
           --volume /etc/kubernetes:/etc/kubernetes:ro,z \
           --volume /usr/lib/os-release:/etc/os-release:ro \
-          --volume /etc/ssl/certs:/etc/ssl/certs:ro \
           --volume /lib/modules:/lib/modules:ro \
           --volume /run:/run \
           --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
           --volume /sys/fs/cgroup/systemd:/sys/fs/cgroup/systemd \
-          --volume /etc/pki/tls/certs:/usr/share/ca-certificates:ro \
           --volume /var/lib/calico:/var/lib/calico:ro \
           --volume /var/lib/docker:/var/lib/docker \
           --volume /var/lib/kubelet:/var/lib/kubelet:rshared,z \
@@ -85,10 +83,11 @@ systemd:
         [Unit]
         Description=Delete Kubernetes node on shutdown
         [Service]
+        Environment=KUBELET_IMAGE=quay.io/poseidon/kubelet:v1.19.4
         Type=oneshot
         RemainAfterExit=true
         ExecStart=/bin/true
-        ExecStop=/bin/bash -c '/usr/bin/podman run --volume /etc/kubernetes:/etc/kubernetes:ro,z --entrypoint /usr/local/bin/kubectl quay.io/poseidon/kubelet:v1.18.8 --kubeconfig=/etc/kubernetes/kubeconfig delete node $HOSTNAME'
+        ExecStop=/bin/bash -c '/usr/bin/podman run --volume /var/lib/kubelet:/var/lib/kubelet:ro,z --entrypoint /usr/local/bin/kubectl $${KUBELET_IMAGE} --kubeconfig=/var/lib/kubelet/kubeconfig delete node $HOSTNAME'
         [Install]
         WantedBy=multi-user.target
 storage:

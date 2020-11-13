@@ -27,10 +27,10 @@ Typhoon distributes upstream Kubernetes, architectural conventions, and cluster 
 
 ## Features <a href="https://www.cncf.io/certification/software-conformance/"><img align="right" src="https://storage.googleapis.com/poseidon/certified-kubernetes.png"></a>
 
-* Kubernetes v1.18.8 (upstream)
+* Kubernetes v1.19.4 (upstream)
 * Single or multi-master, [Calico](https://www.projectcalico.org/) or [Cilium](https://github.com/cilium/cilium) or [flannel](https://github.com/coreos/flannel) networking
 * On-cluster etcd with TLS, [RBAC](https://kubernetes.io/docs/admin/authorization/rbac/)-enabled, [network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/), SELinux enforcing
-* Advanced features like [worker pools](https://typhoon.psdn.io/advanced/worker-pools/), [preemptible](https://typhoon.psdn.io/cl/google-cloud/#preemption) workers, and [snippets](https://typhoon.psdn.io/advanced/customization/#container-linux) customization
+* Advanced features like [worker pools](https://typhoon.psdn.io/advanced/worker-pools/), [preemptible](https://typhoon.psdn.io/flatcar-linux/google-cloud/#preemption) workers, and [snippets](https://typhoon.psdn.io/advanced/customization/#hosts) customization
 * Ready for Ingress, Prometheus, Grafana, CSI, or other [addons](https://typhoon.psdn.io/addons/overview/)
 
 ## Modules
@@ -51,11 +51,11 @@ Typhoon is available for [Flatcar Linux](https://www.flatcar-linux.org/releases/
 
 | Platform      | Operating System | Terraform Module | Status |
 |---------------|------------------|------------------|--------|
-| AWS           | Flatcar Linux    | [aws/container-linux/kubernetes](aws/container-linux/kubernetes) | stable |
-| Azure         | Flatcar Linux    | [azure/container-linux/kubernetes](azure/container-linux/kubernetes) | alpha |
-| Bare-Metal    | Flatcar Linux    | [bare-metal/container-linux/kubernetes](bare-metal/container-linux/kubernetes) | stable |
-| DigitalOcean | Flatcar Linux  | [digital-ocean/container-linux/kubernetes](digital-ocean/container-linux/kubernetes) | beta |
-| Google Cloud  | Flatcar Linux  | [google-cloud/container-linux/kubernetes](google-cloud/container-linux/kubernetes) | beta |
+| AWS           | Flatcar Linux    | [aws/flatcar-linux/kubernetes](aws/flatcar-linux/kubernetes) | stable |
+| Azure         | Flatcar Linux    | [azure/flatcar-linux/kubernetes](azure/flatcar-linux/kubernetes) | alpha |
+| Bare-Metal    | Flatcar Linux    | [bare-metal/flatcar-linux/kubernetes](bare-metal/flatcar-linux/kubernetes) | stable |
+| DigitalOcean | Flatcar Linux  | [digital-ocean/flatcar-linux/kubernetes](digital-ocean/flatcar-linux/kubernetes) | beta |
+| Google Cloud  | Flatcar Linux  | [google-cloud/flatcar-linux/kubernetes](google-cloud/flatcar-linux/kubernetes) | beta |
 
 ## Documentation
 
@@ -70,7 +70,7 @@ Define a Kubernetes cluster by using the Terraform module for your chosen platfo
 
 ```tf
 module "yavin" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/fedora-coreos/kubernetes?ref=v1.18.8"
+  source = "git::https://github.com/poseidon/typhoon//google-cloud/fedora-coreos/kubernetes?ref=v1.19.4"
 
   # Google Cloud
   cluster_name  = "yavin"
@@ -109,9 +109,9 @@ In 4-8 minutes (varies by platform), the cluster will be ready. This Google Clou
 $ export KUBECONFIG=/home/user/.kube/configs/yavin-config
 $ kubectl get nodes
 NAME                                       ROLES    STATUS  AGE  VERSION
-yavin-controller-0.c.example-com.internal  <none>   Ready   6m   v1.18.8
-yavin-worker-jrbf.c.example-com.internal   <none>   Ready   5m   v1.18.8
-yavin-worker-mzdm.c.example-com.internal   <none>   Ready   5m   v1.18.8
+yavin-controller-0.c.example-com.internal  <none>   Ready   6m   v1.19.4
+yavin-worker-jrbf.c.example-com.internal   <none>   Ready   5m   v1.19.4
+yavin-worker-mzdm.c.example-com.internal   <none>   Ready   5m   v1.19.4
 ```
 
 List the pods.

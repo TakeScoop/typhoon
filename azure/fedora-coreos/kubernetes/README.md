@@ -11,22 +11,13 @@ Typhoon distributes upstream Kubernetes, architectural conventions, and cluster 
 
 ## Features <a href="https://www.cncf.io/certification/software-conformance/"><img align="right" src="https://storage.googleapis.com/poseidon/certified-kubernetes.png"></a>
 
-* Kubernetes v1.18.8 (upstream)
+* Kubernetes v1.19.4 (upstream)
 * Single or multi-master, [Calico](https://www.projectcalico.org/) or [Cilium](https://github.com/cilium/cilium) or [flannel](https://github.com/coreos/flannel) networking
 * On-cluster etcd with TLS, [RBAC](https://kubernetes.io/docs/admin/authorization/rbac/)-enabled, [network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/), SELinux enforcing
-* Advanced features like [worker pools](https://typhoon.psdn.io/advanced/worker-pools/), [spot priority](https://typhoon.psdn.io/fedora-coreos/azure/#low-priority) workers, and [snippets](https://typhoon.psdn.io/advanced/customization/) customization
+* Advanced features like [worker pools](https://typhoon.psdn.io/advanced/worker-pools/), [spot priority](https://typhoon.psdn.io/fedora-coreos/azure/#low-priority) workers, and [snippets](https://typhoon.psdn.io/advanced/customization/#hosts) customization
 * Ready for Ingress, Prometheus, Grafana, and other optional [addons](https://typhoon.psdn.io/addons/overview/)
 
 ## Docs
 
 Please see the [official docs](https://typhoon.psdn.io) and the Azure [tutorial](https://typhoon.psdn.io/fedora-coreos/azure/).
-* Kubernetes v1.18.6 (upstream)
-* Single or multi-master, [Calico](https://www.projectcalico.org/) or [flannel](https://github.com/coreos/flannel) networking
-* On-cluster etcd with TLS, [RBAC](https://kubernetes.io/docs/admin/authorization/rbac/)-enabled, [network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/), SELinux enforcing
-* Advanced features like [snippets](https://typhoon.psdn.io/advanced/customization/) customization
-* Ready for Ingress, Prometheus, Grafana, CSI, and other [addons](https://typhoon.psdn.io/addons/overview/)
-
-## Docs
-
-Please see the [official docs](https://typhoon.psdn.io) and the Digital Ocean [tutorial](https://typhoon.psdn.io/fedora-coreos/digitalocean/).
 

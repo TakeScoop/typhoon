@@ -1,12 +1,14 @@
 site_name: Typhoon
 site_description: A minimal and free Kubernetes distribution
 site_author: Dalton Hubble
+copyright: Poseidon Laboratories
 repo_name: poseidon/typhoon
 repo_url: https://github.com/poseidon/typhoon
 theme:
   name: material
   features:
-    - tabs
+    - navigation.tabs
+    - navigation.instant
   logo: 'img/spin.png'
   favicon: 'img/favicon.ico'
   icon:
@@ -41,6 +43,7 @@ markdown_extensions:
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences
+  - pymdownx.tabbed
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
@@ -82,3 +85,4 @@ nav:
     - 'Nginx Ingress': 'addons/ingress.md'
     - 'Prometheus': 'addons/prometheus.md'
     - 'Grafana': 'addons/grafana.md'
+    - 'fleetlock': 'addons/fleetlock.md'

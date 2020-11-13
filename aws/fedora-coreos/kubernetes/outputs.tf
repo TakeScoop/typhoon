@@ -62,6 +62,12 @@ output "worker_target_group_https" {
   value       = module.workers.target_group_https
 }
 
+# Outputs for debug
+
+output "assets_dist" {
+  value = module.bootstrap.assets_dist
+}
+
 # Scoop outputs
 
 output "bastion_dns_name" {
@@ -127,4 +133,3 @@ output "worker_autoscaling_group" {
   value       = module.workers.autoscaling_group
   description = "Name of the workers autoscaling group"
 }
-

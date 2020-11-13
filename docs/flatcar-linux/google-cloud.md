@@ -1,6 +1,6 @@
 # Google Cloud
 
-In this tutorial, we'll create a Kubernetes v1.18.8 cluster on Google Compute Engine with CoreOS Container Linux or Flatcar Linux.
+In this tutorial, we'll create a Kubernetes v1.19.4 cluster on Google Compute Engine with Flatcar Linux.
 
 We'll declare a Kubernetes cluster using the Typhoon Terraform module. Then apply the changes to create a network, firewall rules, health checks, controller instances, worker managed instance group, load balancers, and TLS assets.
 
@@ -56,7 +56,7 @@ terraform {
     }
     google = {
       source = "hashicorp/google"
-      version = "3.34.0"
+      version = "3.43.0"
     }
   }
 }
@@ -88,11 +88,11 @@ Set the [os_image](#variables) in the next step.
 
 ## Cluster
 
-Define a Kubernetes cluster using the module `google-cloud/container-linux/kubernetes`.
+Define a Kubernetes cluster using the module `google-cloud/flatcar-linux/kubernetes`.
 
 ```tf
 module "yavin" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes?ref=v1.18.8"
+  source = "git::https://github.com/poseidon/typhoon//google-cloud/flatcar-linux/kubernetes?ref=v1.19.4"
 
   # Google Cloud
   cluster_name  = "yavin"
@@ -109,7 +109,7 @@ module "yavin" {
 }
 ```
 
-Reference the [variables docs](#variables) or the [variables.tf](https://github.com/poseidon/typhoon/blob/master/google-cloud/container-linux/kubernetes/variables.tf) source.
+Reference the [variables docs](#variables) or the [variables.tf](https://github.com/poseidon/typhoon/blob/master/google-cloud/flatcar-linux/kubernetes/variables.tf) source.
 
 ## ssh-agent
 
@@ -167,9 +167,9 @@ List nodes in the cluster.
 $ export KUBECONFIG=/home/user/.kube/configs/yavin-config
 $ kubectl get nodes
 NAME                                       ROLES    STATUS  AGE  VERSION
-yavin-controller-0.c.example-com.internal  <none>   Ready   6m   v1.18.8
-yavin-worker-jrbf.c.example-com.internal   <none>   Ready   5m   v1.18.8
-yavin-worker-mzdm.c.example-com.internal   <none>   Ready   5m   v1.18.8
+yavin-controller-0.c.example-com.internal  <none>   Ready   6m   v1.19.4
+yavin-worker-jrbf.c.example-com.internal   <none>   Ready   5m   v1.19.4
+yavin-worker-mzdm.c.example-com.internal   <none>   Ready   5m   v1.19.4
 ```
 
 List the pods.
@@ -196,7 +196,7 @@ Learn about [maintenance](/topics/maintenance/) and [addons](/addons/overview/).
 
 ## Variables
 
-Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/google-cloud/container-linux/kubernetes/variables.tf) source.
+Check the [variables.tf](https://github.com/poseidon/typhoon/blob/master/google-cloud/flatcar-linux/kubernetes/variables.tf) source.
 
 ### Required
 

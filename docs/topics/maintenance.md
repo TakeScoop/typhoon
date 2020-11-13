@@ -13,12 +13,12 @@ Typhoon provides tagged releases to allow clusters to be versioned using ordinar
 
 ```
 module "yavin" {
-  source = "git::https://github.com/poseidon/typhoon//google-cloud/fedora-coreos/kubernetes?ref=v1.18.8"
+  source = "git::https://github.com/poseidon/typhoon//google-cloud/fedora-coreos/kubernetes?ref=v1.19.4"
   ...
 }
 
 module "mercury" {
-  source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes?ref=v1.18.8"
+  source = "git::https://github.com/poseidon/typhoon//bare-metal/flatcar-linux/kubernetes?ref=v1.19.4"
   ...
 }
 ```
@@ -66,7 +66,7 @@ Delete or comment the Terraform config for the cluster.
 
 ```
 - module "mercury" {
--   source = "git::https://github.com/poseidon/typhoon//bare-metal/container-linux/kubernetes"
+-   source = "git::https://github.com/poseidon/typhoon//bare-metal/flatcar-linux/kubernetes"
 -   ...
 -}
 ```
@@ -94,7 +94,7 @@ Once you're confident in the new cluster, delete the Terraform config for the ol
 
 ```
 - module "yavin" {
--   source = "git::https://github.com/poseidon/typhoon//google-cloud/container-linux/kubernetes"
+-   source = "git::https://github.com/poseidon/typhoon//google-cloud/flatcar-linux/kubernetes"
 -   ...
 -}
 ```
@@ -289,3 +289,4 @@ No changes. Infrastructure is up-to-date.
 Terraform [v0.12](https://www.hashicorp.com/blog/announcing-terraform-0-12) introduced major changes to the provider plugin protocol and HCL language (first-class expressions, formal list and map types, nullable variables, variable constraints, and short-circuiting ternary operators).
 
 Typhoon modules have been adapted for Terraform v0.12. Provider plugins requirements now enforce v0.12 compatibility. However, some HCL language changes were breaking (list [type hint](https://www.terraform.io/upgrade-guides/0-12.html#referring-to-list-variables) workarounds in v0.11 now have new meaning). Typhoon cannot offer both v0.11 and v0.12 compatibility in the same release. Upcoming releases require upgrading Terraform to v0.12.
+

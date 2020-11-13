@@ -134,6 +134,16 @@ resource "google_compute_firewall" "internal-linux-vxlan" {
     ports    = [4240]
   }
 
+  # Cilium health
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = [4240]
+  }
+
   source_tags = ["${var.cluster_name}-controller", "${var.cluster_name}-worker"]
   target_tags = ["${var.cluster_name}-controller", "${var.cluster_name}-worker"]
 }
