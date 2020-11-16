@@ -172,7 +172,7 @@ variable "apiserver_arguments" {
 
 variable "bastion_type" {
   type        = string
-  default     = "t2.micro"
+  default     = "t3.micro"
   description = "Bastion EC2 instance type"
 }
 
