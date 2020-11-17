@@ -107,6 +107,10 @@ data "ct_config" "worker-ignition" {
   content  = data.template_file.worker-config.rendered
   strict   = true
   snippets = var.snippets
+
+  # As for ct@v0.7.0, if pretty_print is set to false, non-empty snippets will empty the rendered Ignition.
+  # This is likely a bug of ct provider.
+  pretty_print = true
 }
 
 # Worker Fedora CoreOS config
