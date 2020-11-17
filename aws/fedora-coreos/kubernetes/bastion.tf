@@ -1,7 +1,7 @@
 locals {
   user_data_bastion = {
     ignition = {
-      version = "3.0.0"
+      version = "3.1.0"
       config = {
         merge = [
           {
