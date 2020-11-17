@@ -30,7 +30,7 @@ resource "aws_instance" "controllers" {
   user_data = <<EOF
 {
   "ignition": {
-    "version": "3.0.0",
+    "version": "3.1.0",
     "config": {
       "merge": [
         {
