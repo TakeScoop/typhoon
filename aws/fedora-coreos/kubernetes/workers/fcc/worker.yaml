@@ -3,6 +3,27 @@ variant: fcos
 version: 1.1.0
 systemd:
   units:
+    - name: enable-smt.service
+      enabled: true
+      contents: |
+        # https://docs.fedoraproject.org/be/fedora-coreos/kernel-args/
+        [Unit]
+        Description=Enable simultaneous multithreading
+        Before=kubelet.service
+        # We run after `systemd-machine-id-commit.service` to ensure that
+        # `ConditionFirstBoot=true` services won't rerun on the next boot.
+        After=systemd-machine-id-commit.service
+        ConditionKernelCommandLine=mitigations
+        
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/rpm-ostree kargs --delete mitigations --reboot
+
+        [Install]
+        RequiredBy=kubelet.service
+        WantedBy=multi-user.target
+    - name: etcd-member.service
     - name: docker.service
       enabled: true
     - name: wait-for-dns.service
