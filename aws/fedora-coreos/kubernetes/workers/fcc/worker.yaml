@@ -23,7 +23,6 @@ systemd:
         [Install]
         RequiredBy=kubelet.service
         WantedBy=multi-user.target
-    - name: etcd-member.service
     - name: docker.service
       enabled: true
     - name: wait-for-dns.service
